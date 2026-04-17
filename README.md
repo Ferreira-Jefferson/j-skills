@@ -5,9 +5,9 @@
 ![Skills](https://img.shields.io/badge/skills-3-6366f1?style=for-the-badge)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-f97316?style=for-the-badge&logo=anthropic&logoColor=white)
 ![License](https://img.shields.io/badge/license-GPL--3.0-22c55e?style=for-the-badge)
-![Author](https://img.shields.io/badge/by-Jefferson_Ferreira-0ea5e9?style=for-the-badge&logo=github&logoColor=white)
 
 **Skills pessoais para Claude Code — workflows complexos executados com consistência.**
+
 
 </div>
 
@@ -89,3 +89,9 @@ Copie a pasta da skill para `.claude/skills/` no seu projeto e registre no `CLAU
 ```
 
 O Claude Code carrega automaticamente pelo `SKILL.md` de cada pasta.
+
+---
+
+<div align="center">
+<sub>crafted by: Jefferson</sub>
+</div>
