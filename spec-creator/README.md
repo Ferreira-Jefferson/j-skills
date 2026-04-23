@@ -1,6 +1,6 @@
 # spec-creator
 
-> Spec-Driven Development (SDD) agent. **Nenhuma linha de código sem spec aprovada.** Transforma pedidos de funcionalidade em um conjunto de documentos rastreáveis: SPEC → REQUIREMENTS → DESIGN → TEST-PLAN → TASKS → IMPLEMENTATION → REVIEW-FINAL → START.
+> Spec-Driven Development (SDD) agent. **Objetivo: produzir uma spec robusta e completa — não implementar.** Transforma pedidos de funcionalidade em um conjunto de documentos rastreáveis: SPEC → REQUIREMENTS → DESIGN → TEST-PLAN → TASKS → REVIEW-FINAL → START.
 
 ---
 
@@ -8,7 +8,9 @@
 
 Features médias e grandes frequentemente viram dívida quando são implementadas direto do pedido em linguagem natural. Faltam requisitos verificáveis, decisões arquiteturais viram "tribal knowledge", testes são lembrados depois, e ninguém sabe o critério de "pronto".
 
-O `spec-creator` força **disciplina de engenharia** via 9 fases sequenciais, cada uma com aprovação explícita antes da próxima. O resultado é uma pasta `.claude/specs/<feature>/` com tudo que qualquer sessão futura precisa para retomar e terminar a feature — humano ou agente.
+O `spec-creator` força **disciplina de engenharia** via 8 fases sequenciais (0 a 7), cada uma com aprovação explícita antes da próxima. O resultado é uma pasta `.claude/specs/<feature>/` com tudo que uma sessão de implementação futura precisa para executar a feature — humano ou agente.
+
+**Importante:** esta skill não escreve código. A implementação acontece em sessão separada, guiada pelo `START.md` gerado na FASE 7.
 
 ---
 
@@ -39,7 +41,7 @@ Regra prática: se a feature vai gerar **5+ arquivos ou envolver 2+ pessoas/sess
 
 ---
 
-## Fluxo das 9 fases
+## Fluxo das 8 fases
 
 ```
 [INPUT] Descrição da funcionalidade
@@ -49,12 +51,11 @@ Regra prática: se a feature vai gerar **5+ arquivos ou envolver 2+ pessoas/sess
   ↓ [FASE 3] DESIGN.md        (COMO)         → phases/phase-3-design.md
   ↓ [FASE 4] TEST-PLAN.md     (VALIDAÇÃO)    → phases/phase-4-test-plan.md
   ↓ [FASE 5] TASKS.md         (UNIDADES)     → phases/phase-5-tasks.md
-  ↓ [FASE 6] Implementação (task a task)     → phases/phase-6-implementation.md
-  ↓ [FASE 7] REVIEW-FINAL.md                 → phases/phase-7-review.md
-  ↓ [FASE 8] START.md (retomada autônoma)    → phases/phase-8-start.md
+  ↓ [FASE 6] REVIEW-FINAL.md  (REVIEW SPEC)  → phases/phase-6-review.md
+  ↓ [FASE 7] START.md         (HANDOFF)      → phases/phase-7-start.md
 ```
 
-Toda transição (exceto FASE 7 → 8, que é automática) **requer aprovação explícita do usuário**. "Parece bom" não conta — aguarde "aprovado", "pode ir" ou equivalente.
+Toda transição (exceto FASE 6 → 7, que é automática) **requer aprovação explícita do usuário**. "Parece bom" não conta — aguarde "aprovado", "pode ir" ou equivalente.
 
 ---
 
@@ -66,10 +67,9 @@ Toda transição (exceto FASE 7 → 8, que é automática) **requer aprovação 
 | `REQUIREMENTS.md` | contratual | O QUE precisa ser verdade — user stories + ACs verificáveis |
 | `DESIGN.md` | arquitetural | COMO vai ser feito — componentes, modelo, API, segurança |
 | `TEST-PLAN.md` | verificação | Como saberemos que funciona — casos de teste por AC |
-| `TASKS.md` | plano | Unidades atômicas de trabalho com dependências |
-| `IMPLEMENTATION` | execução | Task a task, commit atômico, aprovação entre tasks |
-| `REVIEW-FINAL.md` | completude | Confirma que tudo foi implementado + testado |
-| `START.md` | retomada | Ponto de entrada único para sessão futura executar/continuar |
+| `TASKS.md` | plano | Unidades atômicas de trabalho com dependências e arquivos mapeados |
+| `REVIEW-FINAL.md` | completude da spec | Consistência entre documentos, cobertura de RFs/RNFs, gaps |
+| `START.md` | handoff | Ponto de entrada único para a sessão de implementação executar a spec |
 
 ---
 
@@ -99,7 +99,7 @@ FASE 2 → REQUIREMENTS.md
        → User stories MoSCoW, ACs verificáveis, RNFs com métrica
        → matriz de rastreabilidade US ↔ RF ↔ RNF ↔ RN
 
-... e assim por diante até FASE 8 (START.md).
+... e assim por diante até FASE 7 (START.md).
 ```
 
 Cada aprovação sua = avanço de 1 fase. Se algo não está bom, volta à fase anterior e refaz.
@@ -115,14 +115,12 @@ Cada aprovação sua = avanço de 1 fase. Se algo não está bom, volta à fase 
 ├── DESIGN.md                 # Fase 3 — arquitetura
 ├── TEST-PLAN.md              # Fase 4 — casos de teste
 ├── TASKS.md                  # Fase 5 — plano de execução
-├── REVIEW-FINAL.md           # Fase 7 — checklist de entrega
-├── START.md                  # Fase 8 — ponto de retomada
+├── REVIEW-FINAL.md           # Fase 6 — review da spec completa
+├── START.md                  # Fase 7 — handoff para implementação
 └── adrs/                     # Architecture Decision Records
     ├── ADR-001-<tema>.md
     └── ADR-002-<tema>.md
 ```
-
-Feature grande pode adicionar subpastas como `implementation/` com subdocumentos por grupo de tasks.
 
 ---
 
@@ -132,7 +130,7 @@ Feature grande pode adicionar subpastas como `implementation/` com subdocumentos
 
 | Arquivo | Para que serve |
 |---------|----------------|
-| [SKILL.md](SKILL.md) | Manual — fluxo das 9 fases + triggers |
+| [SKILL.md](SKILL.md) | Manual — fluxo das 8 fases + triggers |
 | [rules.md](rules.md) | Regras críticas aplicáveis a todas as fases |
 | [gotchas.md](gotchas.md) | 10 erros frequentes a evitar (G-001 a G-010) |
 | [sdd-checklist.md](sdd-checklist.md) | Checklist de qualidade por fase — validação pós-fase |
@@ -150,9 +148,8 @@ Cada fase tem arquivo dedicado em `phases/`:
 | 3 — DESIGN | [phase-3-design.md](phases/phase-3-design.md) |
 | 4 — TEST-PLAN | [phase-4-test-plan.md](phases/phase-4-test-plan.md) |
 | 5 — TASKS | [phase-5-tasks.md](phases/phase-5-tasks.md) |
-| 6 — Implementação | [phase-6-implementation.md](phases/phase-6-implementation.md) |
-| 7 — Review Final | [phase-7-review.md](phases/phase-7-review.md) |
-| 8 — START.md | [phase-8-start.md](phases/phase-8-start.md) |
+| 6 — Review Final da Spec | [phase-6-review.md](phases/phase-6-review.md) |
+| 7 — START.md (Handoff) | [phase-7-start.md](phases/phase-7-start.md) |
 
 A skill **carrega uma fase por vez** — não tenta ter todas em contexto simultaneamente (evita ruído).
 
@@ -160,10 +157,10 @@ A skill **carrega uma fase por vez** — não tenta ter todas em contexto simult
 
 ## Regras críticas (do rules.md)
 
-1. **Branch dedicada antes da FASE 6.** Formato: `feature/feat-NNN-kebab-name`, `fix/fix-NNN-...`, `refactor/refactor-NNN-...`. Sem branch ativa, a FASE 6 não começa.
-2. **Schema/infra segue convenções do projeto** descobertas na FASE 0 — nunca aplicar changes ad-hoc.
+1. **Esta skill não implementa.** Nenhuma linha de código é escrita aqui. Branch, TDD, commits e execução são responsabilidade da sessão de implementação que consome o START.md.
+2. **Schema/infra segue convenções do projeto** descobertas na FASE 0 — nunca especificar changes ad-hoc.
 3. **Artefatos isolados** em `.claude/specs/<feature>/`. Prefixos de contexto: `CONTEXT-`, `ERRORS-`, `NOTES-`, `ADR-`.
-4. **Nenhum código antes da FASE 5 aprovada.** Se encontrar inconsistência entre docs, PARE e sinalize. Decisão arquitetural não prevista? Crie ADR.
+4. **Inconsistência entre docs → pare e sinalize.** Decisão arquitetural não prevista → crie ADR.
 
 ---
 
@@ -173,12 +170,12 @@ A skill **carrega uma fase por vez** — não tenta ter todas em contexto simult
 |----|---------|-----|
 | G-001 | Pular FASE 0 e ir direto para SPEC | FASE 0 é obrigatória |
 | G-002 | Carregar todos os phase files de uma vez | Carregue só a fase atual |
-| G-003 | Avançar sem aprovação explícita | Aguarde "ok", "aprovado" |
-| G-004 | Criar branch depois de começar a codar | Branch antes da TASK-001 |
+| G-003 | Tentar implementar durante a skill | Skill só define; implementação via START.md |
+| G-004 | Review da FASE 6 cobrir implementação | Review cobre a spec (consistência, cobertura, gaps) |
 | G-005 | Salvar SPEC/REQ na raiz ou em `docs/` | Tudo em `.claude/specs/<feature>/` |
-| G-006 | START.md antes da REVIEW FINAL | Só na FASE 8 |
-| G-007 | Executar múltiplas tasks sem pausa | 1 task por vez, aprovação entre elas |
-| G-008 | Esboçar código antes da FASE 5 aprovada | ADR se precisar; código só depois |
+| G-006 | START.md antes da REVIEW FINAL | Só na FASE 7 |
+| G-007 | Avançar de fase sem aprovação | Aguarde "ok", "aprovado" |
+| G-008 | START.md com tasks "em andamento" | Todas pendentes; TASK-001 é a próxima |
 | G-009 | Assumir stack ao invés de descobrir | FASE 0 existe para isso |
 | G-010 | Forçar seções irrelevantes do template | Use a seção "Adaptação" de cada phase file |
 
@@ -201,10 +198,11 @@ Cada fase tem uma mini-checklist para validar pós-fase. Exemplos:
 - [ ] ≥1 ADR por decisão não-óbvia
 - [ ] Validação de entrada especificada
 
-**FASE 6 (Implementação)**
-- [ ] Nenhuma task avança sem aprovação
-- [ ] Testes escritos junto com código (TDD preferencial)
-- [ ] Critério de conclusão verificado antes de done
+**FASE 6 (Review Final da Spec)**
+- [ ] Todo RF com entrada em DESIGN, TEST-PLAN e TASKS
+- [ ] Todo RNF com métrica e teste
+- [ ] Matriz de rastreabilidade completa
+- [ ] Gaps bloqueantes listados ou confirmados como zero
 
 Ver [sdd-checklist.md](sdd-checklist.md) para lista completa.
 
@@ -230,7 +228,7 @@ Decisões não-óbvias viram ADR em `.claude/specs/<feature>/adrs/`. Template em
 |---------|--------------|
 | Feature pequena (1 página de SPEC) | Pule seções vazias, não force template rígido |
 | Feature média | Siga o fluxo completo |
-| Feature grande | Subdivida IMPLEMENTATION em `implementation/0N-*.md` por grupo |
+| Feature grande | Quebre TASKS.md em seções por grupo (Setup → Backend → Frontend → QA) |
 | Pipeline / backend-only | Pule seções de Frontend no DESIGN |
 | Infra / devops | Foque em diagrama de deploy, rollback |
 
@@ -250,30 +248,30 @@ Cada phase file tem uma seção "Adaptação" documentando o que pode ser cortad
 ```
 frontend-foundations (audit) → relatório priorizado
        ↓
-spec-creator → SPEC + REQUIREMENTS + DESIGN + TASKS + IMPLEMENTATION
+spec-creator → SPEC + REQUIREMENTS + DESIGN + TEST-PLAN + TASKS + REVIEW-FINAL + START
        ↓
-sessão executora → aplica as tasks
+sessão de implementação consome START.md → aplica as tasks task-por-task
        ↓
-REVIEW-FINAL aprova → abre PR
+PR aberto quando todas as tasks estiverem concluídas
 ```
 
 ---
 
-## Comando de retomada
+## Comando de handoff
 
-Sessão futura retoma enviando:
+Depois que a skill termina, uma nova sessão executa a spec enviando:
 
 ```
 use .claude/specs/<feature>/START.md
 ```
 
 O START.md tem:
-- Estado atual (tasks concluídas / em andamento / pendentes)
-- Próximo passo concreto com referência a arquivos
-- Protocolo de execução autônoma (quando agir vs. quando perguntar)
-- Bloqueios conhecidos
+- Plano de implementação (todas as tasks pendentes, TASK-001 é a próxima)
+- Referência ordenada aos docs da spec
+- Protocolo de execução (branch dedicada, TDD, 1 task = 1 commit, aprovação entre tasks)
+- Stack, ambiente e contexto de negócio
 
-Qualquer agente Claude consegue retomar a partir dali — o propósito é **zero perguntas redundantes**.
+Qualquer agente Claude consegue executar a partir dali — o propósito é **zero perguntas redundantes**.
 
 ---
 
@@ -284,9 +282,9 @@ Qualquer agente Claude consegue retomar a partir dali — o propósito é **zero
 | "Ah, esqueci de pensar em auth nessa feature" | REQUIREMENTS força US + ACs de auth se aplicável |
 | Decisão arquitetural esquecida em 3 meses | ADR versionado em `adrs/` |
 | Testes pensados depois do código | TEST-PLAN existe antes da primeira linha |
-| Nova pessoa leva dias pra entender a feature | START.md é suficiente para retomar em minutos |
-| Escopo infla durante implementação | Escopo negativo explícito no SPEC |
-| Retrabalho por desalinhamento | Aprovação entre fases captura problemas cedo |
+| Nova pessoa leva dias pra entender a feature | START.md é suficiente para executar em minutos |
+| Escopo infla durante implementação | Escopo negativo explícito no SPEC + tasks atômicas |
+| Retrabalho por desalinhamento | Aprovação entre fases + REVIEW-FINAL capturam problemas cedo |
 
 ---
 
@@ -297,13 +295,13 @@ Qualquer agente Claude consegue retomar a partir dali — o propósito é **zero
 - ❌ REQUIREMENTS com ACs vagos ("deve funcionar") — não é verificável
 - ❌ DESIGN sem ADR para decisões difíceis — conhecimento vira tribal
 - ❌ TASKS.md com placeholders em vez de caminhos reais de arquivo
-- ❌ FASE 6 sem branch dedicada — viola rules.md §1
+- ❌ Implementar durante a skill — viola o escopo (definir, não executar)
 
 ---
 
 ## Filosofia
 
-> A spec não é obstáculo à implementação. A spec **é** a implementação, só que em prosa executável.
+> A spec não é obstáculo à implementação. A spec **é** o mapa executável que a sessão de implementação vai seguir.
 
 Cada fase captura decisões que **de qualquer forma** precisariam ser tomadas — a diferença é que aqui elas são tomadas **antes** do código, revisadas, versionadas, e deixadas em formato que sessões futuras conseguem consumir sem contexto prévio.
 

@@ -11,7 +11,9 @@ user-invocable: true
 
 # SDD Agent — Spec-Driven Development
 
-Nenhuma linha de código sem spec aprovada. Execute fase por fase — leia o arquivo da fase **antes** de iniciá-la. Nunca carregue todos os arquivos de uma vez.
+> **Escopo desta skill:** apenas **definir** a spec. Nenhuma linha de código é escrita aqui. A implementação ocorre em sessão separada, guiada pelo `START.md` gerado ao final.
+
+Execute fase por fase — leia o arquivo da fase **antes** de iniciá-la. Nunca carregue todos os arquivos de uma vez.
 
 ## Fluxo
 
@@ -23,12 +25,11 @@ Nenhuma linha de código sem spec aprovada. Execute fase por fase — leia o arq
   ↓ [FASE 3] DESIGN.md — Arquitetura      → @.claude/skills/spec-creator/phases/phase-3-design.md
   ↓ [FASE 4] TEST-PLAN.md                 → @.claude/skills/spec-creator/phases/phase-4-test-plan.md
   ↓ [FASE 5] TASKS.md — Tasks Atômicas    → @.claude/skills/spec-creator/phases/phase-5-tasks.md
-  ↓ [FASE 6] IMPLEMENTATION — task a task → @.claude/skills/spec-creator/phases/phase-6-implementation.md
-  ↓ [FASE 7] REVIEW FINAL                 → @.claude/skills/spec-creator/phases/phase-7-review.md
-  ↓ [FASE 8] START.md — Entrada autônoma  → @.claude/skills/spec-creator/phases/phase-8-start.md
+  ↓ [FASE 6] REVIEW FINAL — Spec Review   → @.claude/skills/spec-creator/phases/phase-6-review.md
+  ↓ [FASE 7] START.md — Handoff           → @.claude/skills/spec-creator/phases/phase-7-start.md
 ```
 
-Toda transição (exceto FASE 8) requer aprovação explícita do usuário.
+Toda transição (exceto FASE 7, que é automática após a FASE 6) requer aprovação explícita do usuário.
 
 ## Referências
 

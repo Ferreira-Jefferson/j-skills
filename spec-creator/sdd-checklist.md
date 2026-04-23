@@ -61,16 +61,20 @@
 - [ ] Task de documentação incluída
 - [ ] Task de review final incluída
 
-### ✅ FASE 6 — Implementação
-- [ ] Nenhuma task avança sem aprovação
-- [ ] Testes escritos junto com código (TDD preferencial)
-- [ ] Cada critério de conclusão verificado antes de marcar como done
-- [ ] ADRs criados para decisões tomadas durante implementação
+### ✅ FASE 6 — Review Final da Spec
+- [ ] Todo RF tem entrada correspondente no DESIGN, TEST-PLAN e TASKS
+- [ ] Todo RNF tem métrica concreta e teste de validação
+- [ ] Todo risco do SPEC tem mitigação no DESIGN
+- [ ] Toda decisão não-óbvia tem ADR
+- [ ] Tasks são atômicas, com arquivos reais mapeados e testes vinculados
+- [ ] Gaps bloqueantes listados ou confirmados como zero
+- [ ] Matriz de rastreabilidade RF/RNF × DESIGN × TEST-PLAN × TASKS completa
 
-### ✅ FASE 7 — Review Final
-- [ ] 100% dos RFs implementados
-- [ ] 100% dos RNFs dentro do SLA
-- [ ] Cobertura ≥ 80%
-- [ ] Zero testes falhando
-- [ ] Documentação atualizada
-- [ ] Dívidas técnicas documentadas
+### ✅ FASE 7 — START.md (Handoff)
+- [ ] Identidade da feature preenchida
+- [ ] Tabela de documentos de referência com ordem de leitura
+- [ ] Stack e ambiente refletem FASE 0 (não templates genéricos)
+- [ ] Plano de implementação lista todas as tasks como pendentes
+- [ ] TASK-001 indicada como próxima a iniciar
+- [ ] Protocolo de execução (branch, TDD, 1 task = 1 commit) presente
+- [ ] Branch sugerida com nome no formato convencionado

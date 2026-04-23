@@ -14,11 +14,11 @@
 ## Mapeamento de Arquivos
 
 Após gerar o esqueleto, explore a codebase e substitua placeholders por caminhos reais:
-- `@caminho/arquivo` — acesso direto na FASE 6
+- `@caminho/arquivo` — acesso direto na sessão de implementação
 - `L42-L87` — intervalo de linhas para modificações
 - `"novo arquivo"` — criações
 
-**Por que importa:** com `@arquivo` mapeado, a FASE 6 não re-explora a codebase — cada task sabe exatamente onde atuar.
+**Por que importa:** com `@arquivo` mapeado, a sessão de implementação (que consumirá o START.md gerado na FASE 7) não precisa re-explorar a codebase — cada task sabe exatamente onde atuar.
 
 ## Adaptação
 
@@ -37,4 +37,6 @@ Após gerar o esqueleto, explore a codebase e substitua placeholders por caminho
 ## Saída
 
 Gere `.claude/specs/[feature-name]/TASKS.md` e pergunte:
-> *"TASKS geradas e arquivos mapeados. Verifique se os caminhos fazem sentido. Posso iniciar a implementação?"*
+> *"TASKS geradas e arquivos mapeados. Verifique se os caminhos fazem sentido. Posso avançar para a revisão final da spec (FASE 6)?"*
+
+**Importante:** esta skill não implementa as tasks. A FASE 6 revisa a spec completa; a FASE 7 gera o START.md como handoff para uma sessão separada de implementação.
