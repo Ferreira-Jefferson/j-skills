@@ -1,0 +1,119 @@
+# AGENTS.md — __PROJECT_NAME__
+
+> Arquivo machine-readable para agentes de IA. Humanos: ver `README.md`.
+
+## Propósito
+
+__ONE_SENTENCE_DESCRIPTION_OF_WHAT_THIS_PROJECT_DOES__
+
+## Stack
+
+- **Linguagem:** __LANGUAGE_AND_VERSION__
+- **Framework:** __FRAMEWORK__
+- **Banco:** __DATABASE__
+- **Fila/eventos:** __QUEUE_IF_ANY__
+- **Front/UI:** __FRONTEND_IF_ANY__
+
+## Layout
+
+```
+/
+├── AGENTS.md                  ← você está aqui
+├── README.md                  ← para humanos
+├── modules/                   ← features do produto (slices verticais)
+│   └── <feature>/             ← cada pasta = 1 feature independente
+│       ├── MODULE.md          ← manifest: ler antes de qualquer task no módulo
+│       ├── domain.*           ← regra de negócio
+│       ├── handlers.*         ← entry points (HTTP, eventos, jobs)
+│       ├── ui.*               ← se aplicável
+│       ├── migrations/        ← tabelas próprias do módulo
+│       ├── fixtures/
+│       └── tests/
+├── shared/                    ← infra não-opinada, compartilhada
+│   ├── db/
+│   ├── logger/
+│   ├── http_client/
+│   ├── queue/
+│   ├── auth/
+│   └── contracts/             ← schemas de evento entre módulos
+├── tests/
+│   └── e2e/                   ← apenas testes que cruzam módulos
+├── config/
+│   └── lint/                  ← config de enforcement de fronteiras
+└── scripts/
+    └── scaffold_module.sh     ← criar módulo novo
+```
+
+## Regras de fronteira (ENFORÇADAS NO BUILD)
+
+1. **Módulo nunca importa módulo.** `modules/<a>/` não pode importar `modules/<b>/`. Linter falha.
+2. **`shared/` nunca importa de `modules/`.** Infra não conhece features.
+3. **Regra do 3.** Código só vira `shared/` após 3 módulos usarem o mesmo.
+4. **Comunicação entre módulos:** via contrato/evento em `shared/contracts/`, nunca chamada direta.
+5. **Sem `utils/`, `common/`, `helpers/` em `shared/`.** Nomes específicos obrigatórios.
+
+## Comandos
+
+```bash
+# Setup
+__SETUP_COMMAND__                 # ex: pip install -e ".[dev]" | npm ci
+
+# Rodar localmente
+__DEV_COMMAND__                   # ex: uvicorn app.main:app --reload | npm run dev
+
+# Testes
+__TEST_COMMAND__                  # ex: pytest | npm test
+__TEST_UNIT_COMMAND__             # ex: pytest -m unit
+__TEST_E2E_COMMAND__              # ex: playwright test
+
+# Lint + fronteiras
+__LINT_COMMAND__                  # ex: ruff check . && lint-imports
+__ARCH_CHECK_COMMAND__            # ex: lint-imports --config config/lint/.importlinter
+
+# Scaffold módulo novo
+./scripts/scaffold_module.sh <nome_do_modulo>
+
+# Check completo (o que o CI roda)
+__CHECK_COMMAND__                 # ex: make check
+```
+
+## Convenções
+
+- **Idioma do código:** __CODE_LANGUAGE__ (ex: inglês)
+- **Idioma da documentação:** __DOC_LANGUAGE__ (ex: português)
+- **Estilo:** __STYLE_TOOL__ (ex: ruff format / prettier)
+- **TDD:** __TDD_POLICY__ (ex: obrigatório / opcional / recomendado para lógica de domínio)
+- **Cobertura mínima:** __COVERAGE_THRESHOLD__ (ex: 80%)
+- **Commits:** __COMMIT_STYLE__ (ex: conventional — feat:, fix:, test:, refactor:, docs:, chore:)
+- **Escopo de commit:** 1 feature = 1 commit. Não acumular.
+
+## Fluxo para adicionar feature
+
+1. `./scripts/scaffold_module.sh <nome>`
+2. Preencher `MODULE.md` (propósito, entry points, deps).
+3. Escrever testes primeiro (se TDD obrigatório).
+4. Implementar.
+5. Rodar `__CHECK_COMMAND__` — deve passar.
+6. Commit.
+
+## Fluxo para remover feature
+
+1. `rm -rf modules/<feature>/`
+2. Remover 1 linha do registry de rotas/jobs.
+3. Commit.
+
+Se o passo 1+2 não basta, a arquitetura regrediu — investigar imports cruzados.
+
+## Onde achar o quê
+
+- **Bugs / tasks:** __BUG_TRACKER__ (ex: GitHub Issues, Linear project ABC)
+- **Docs de produto:** __PRODUCT_DOCS__ (ex: Notion workspace X)
+- **Design / UX:** __DESIGN_DOCS__ (ex: Figma link)
+- **Dashboards / métricas:** __DASHBOARDS__ (ex: Grafana link)
+- **ADRs (decisões de arquitetura):** `.claude/docs/ADR/` ou `docs/adr/`
+
+## Para aprofundar
+
+- Filosofia e porquês: `.claude/skills/feature-first/references/principles.md`
+- Anti-patterns: `.claude/skills/feature-first/references/anti-patterns.md`
+- __PROJECT_SPECIFIC_DOC_LINKS__
