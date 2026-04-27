@@ -51,9 +51,14 @@ Responda sim/não a cada:
 - **Não avance se houver gap bloqueante.** Retorne à fase correspondente, corrija e refaça o review.
 - **Use dados reais da spec.** Cada afirmação deve poder ser checada abrindo o documento citado.
 
-## Saída
+## Saída e dispatch ao reviewer
 
-Após gerar `REVIEW-FINAL.md`, pergunte:
-> *"Review da spec concluído. [N gaps encontrados / spec aprovada]. Posso gerar o START.md para handoff?"*
+Gere `.claude/specs/[feature-name]/REVIEW-FINAL.md` e submeta ao **spec-reviewer** com o prompt obrigatório:
 
-Se houver gaps bloqueantes, liste-os explicitamente e aguarde instrução do usuário antes de gerar o START.md.
+> *"Um desenvolvedor produziu o REVIEW-FINAL.md (FASE 6) para a feature [feature-name], consolidando a auditoria de toda a spec. Você é um revisor sênior. Avalie com olhar crítico de senior engineer: a matriz de rastreabilidade RF/RNF × DESIGN × TEST-PLAN × TASKS está completa? Os gaps listados são reais e cobrem tudo? Há gap bloqueante não tratado? A spec está pronta para handoff de implementação? Aprovar ou pedir correções."*
+
+- **APROVADO** → avançar automaticamente para FASE 7 (geração do START.md)
+- **REJEITADO** → corrigir os issues bloqueantes (geralmente voltando à fase correspondente para complementar) e re-submeter
+- **ESCALAR** → consultar humano com a pergunta específica do reviewer
+
+**Regra:** se o REVIEW-FINAL listar gaps bloqueantes, o reviewer DEVE rejeitar — não há handoff com gaps abertos.

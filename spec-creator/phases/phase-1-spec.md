@@ -24,7 +24,12 @@
 - Copiar o escopo positivo como escopo negativo invertido ("não fará o oposto de X")
 - Riscos genéricos sem mitigação ("pode ter bugs" não é risco útil)
 
-## Saída
+## Saída e dispatch ao reviewer
 
-Gere `.claude/specs/[feature-name]/SPEC.md` e pergunte:
-> *"SPEC gerada. Revise e me diga se posso avançar para REQUIREMENTS."*
+Gere `.claude/specs/[feature-name]/SPEC.md` e submeta ao **spec-reviewer** com o prompt obrigatório:
+
+> *"Um desenvolvedor produziu o documento SPEC.md (FASE 1) para a feature [feature-name]. Você é um revisor sênior. Avalie com olhar crítico de senior engineer: o problema está articulado? A solução é em alto nível (sem virar design)? Riscos têm mitigação real? Escopo negativo é específico? Aprovar ou pedir correções."*
+
+- **APROVADO** → avançar automaticamente para FASE 2
+- **REJEITADO** → corrigir os issues bloqueantes apontados e re-submeter
+- **ESCALAR** → consultar humano com a pergunta específica do reviewer

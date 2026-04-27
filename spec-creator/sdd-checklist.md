@@ -60,6 +60,9 @@
 - [ ] Ordem respeita dependências técnicas
 - [ ] Task de documentação incluída
 - [ ] Task de review final incluída
+- [ ] Mapa de waves de paralelismo presente ao final do TASKS.md
+- [ ] Toda task classificada em WAVE N de acordo com suas dependências
+- [ ] Nenhum ciclo de dependência (A depende de B que depende de A)
 
 ### ✅ FASE 6 — Review Final da Spec
 - [ ] Todo RF tem entrada correspondente no DESIGN, TEST-PLAN e TASKS
@@ -74,7 +77,9 @@
 - [ ] Identidade da feature preenchida
 - [ ] Tabela de documentos de referência com ordem de leitura
 - [ ] Stack e ambiente refletem FASE 0 (não templates genéricos)
+- [ ] Comando exato de `git worktree add` presente com branch e diretório
+- [ ] Branch do orquestrador (merge target) identificada
 - [ ] Plano de implementação lista todas as tasks como pendentes
 - [ ] TASK-001 indicada como próxima a iniciar
-- [ ] Protocolo de execução (branch, TDD, 1 task = 1 commit) presente
-- [ ] Branch sugerida com nome no formato convencionado
+- [ ] Protocolo de execução (worktree isolado, TDD, 1 task = 1 commit) presente
+- [ ] Instrução de merge após testes passarem presente

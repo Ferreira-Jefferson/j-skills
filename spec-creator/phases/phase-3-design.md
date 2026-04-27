@@ -41,7 +41,12 @@ Itens **não-aplicáveis** → "N/A" com justificativa de 1 linha. Não crie se�
 - Marcar todos os riscos OWASP como "Aplicável" por precaução — só gera trabalho inútil
 - Modelo de dados sem relacionamentos ou sem migrações
 
-## Saída
+## Saída e dispatch ao reviewer
 
-Gere `.claude/specs/[feature-name]/DESIGN.md` e pergunte:
-> *"DESIGN completo. Revise arquitetura, modelo de dados e API contract — este é o ponto mais crítico. Posso avançar para o TEST PLAN?"*
+Gere `.claude/specs/[feature-name]/DESIGN.md` e submeta ao **spec-reviewer** com o prompt obrigatório:
+
+> *"Um desenvolvedor produziu o documento DESIGN.md (FASE 3) para a feature [feature-name]. Você é um revisor sênior. Avalie com olhar crítico de senior engineer: a arquitetura é sólida e justificada? O modelo de dados está normalizado? O API contract cobre erros? A avaliação de segurança é coerente (não força OWASP completo, mas não pula riscos reais)? Decisões não-óbvias têm ADR? Aprovar ou pedir correções."*
+
+- **APROVADO** → avançar automaticamente para FASE 4
+- **REJEITADO** → corrigir os issues bloqueantes e re-submeter
+- **ESCALAR** → consultar humano com a pergunta específica do reviewer

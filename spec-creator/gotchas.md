@@ -27,9 +27,9 @@ Adicione novas entradas sempre que Claude tropeçar em algo novo.
 **Sintoma:** START.md gerado ao final da FASE 5 "para facilitar retomada".
 **Fix:** START.md é gerado APENAS na FASE 7, depois que REVIEW-FINAL.md confirma que a spec está completa.
 
-## G-007: Avançar de fase sem aprovação explícita
-**Sintoma:** Após escrever um doc, já começa o próximo sem esperar confirmação.
-**Fix:** Toda transição de fase requer aprovação (exceto FASE 7, que é automática após a FASE 6). "Parece bom" não é aprovação. Aguarde "aprovado", "pode ir", "ok" ou equivalente explícito.
+## G-007: Avançar de fase sem dispatch ao spec-reviewer
+**Sintoma:** Após escrever um doc, começa o próximo sem submeter ao revisor formal — ou pergunta ao usuário em vez de acionar o agente.
+**Fix:** Toda transição é gateada pelo agente `spec-reviewer` (não pelo humano). Submeta o doc com o prompt obrigatório de revisão sênior; só avance no veredicto APROVADO. Em REJEITADO, corrija e re-submeta. Em ESCALAR, aí sim consulte o humano. (FASE 7 é automática após APROVADO em FASE 6.)
 
 ## G-008: START.md marcar tasks como "em andamento" ou "concluídas"
 **Sintoma:** O START.md gerado declara TASK-001 como "em andamento" ou lista tasks como "concluídas".
@@ -42,3 +42,11 @@ Adicione novas entradas sempre que Claude tropeçar em algo novo.
 ## G-010: Forçar seções irrelevantes por seguir template rígido
 **Sintoma:** Feature backend-only com seção "Frontend Components" vazia, ou pipeline com seção "Rate Limiting".
 **Fix:** Cada phase file tem uma seção "Adaptação" — use-a. Omita seções que não se aplicam à feature.
+
+## G-011: Furo no DESIGN descoberto durante a implementação
+**Sintoma:** Agente desenvolvedor (ou code-reviewer) escala porque o DESIGN omite uma decisão crítica ou está inconsistente com a realidade do código.
+**Fix:** Esta skill é one-shot — não tem mecanismo de "re-disparar fases". O orquestrador deve **pausar a wave** e o usuário deve abrir uma **nova sessão de spec-creator com escopo de patch**: criar `.claude/specs/[feature-name]-patch-NN/` apenas com o delta (apenas os documentos da fase impactada). Após review, o patch é integrado manualmente nos docs originais e a implementação retoma. Nunca deixe o agente "improvisar" para preencher gap do DESIGN.
+
+## G-012: Esquecer de materializar agentes no SETUP
+**Sintoma:** A skill começa a FASE 0 sem ter criado `.claude/specs/[feature-name]/agents/` com os 3 templates copiados (orchestrator, code-reviewer, developer).
+**Fix:** O SETUP é etapa OBRIGATÓRIA antes da FASE 0. Sem ele, a sessão de implementação não terá agentes formais para consumir — START.md vai apontar para arquivos inexistentes. Verificar que a pasta `agents/` da spec existe e contém os 3 arquivos (com placeholders já substituídos) antes de avançar para FASE 0.
