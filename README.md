@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Skills](https://img.shields.io/badge/skills-3-6366f1?style=for-the-badge)
+![Skills](https://img.shields.io/badge/skills-4-6366f1?style=for-the-badge)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-f97316?style=for-the-badge&logo=anthropic&logoColor=white)
 ![License](https://img.shields.io/badge/license-GPL--3.0-22c55e?style=for-the-badge)
 
@@ -20,6 +20,7 @@ Skills são instruções estruturadas que ensinam o Claude Code a executar workf
 ```
 j-skills/
 ├── error-memory/          # memória persistente de erros
+├── feature-first/         # arquitetura por feature, otimizada para IA
 ├── frontend-foundations/  # fundações e auditoria de frontend
 └── spec-creator/          # spec-driven development
 ```
@@ -62,18 +63,35 @@ Inclui **templates prontos** para componentes, hooks, páginas, stores e testes.
 Spec-Driven Development — nenhuma linha de código sem spec aprovada.
 
 ```
-INPUT → FASE 0: Entrevista & Clarificação
+INPUT → SETUP: cria pasta + materializa agentes da implementação
+      → FASE 0: Entrevista & Clarificação
       → FASE 1: SPEC.md          (visão geral)
       → FASE 2: REQUIREMENTS.md
       → FASE 3: DESIGN.md        (arquitetura)
       → FASE 4: TEST-PLAN.md
       → FASE 5: TASKS.md         (tasks atômicas)
-      → FASE 6: IMPLEMENTATION   (task a task)
-      → FASE 7: REVIEW FINAL
-      → FASE 8: START autônomo
+      → FASE 6: REVIEW FINAL     (consistência da spec)
+      → FASE 7: START.md         (handoff para implementação)
 ```
 
-Cada fase é carregada on-demand. Toda transição requer aprovação explícita do usuário.
+Cada fase é carregada on-demand. Gates entre fases são automatizados pelo agente `spec-reviewer` — humanos só são acionados via escalação.
+
+---
+
+### `feature-first` ![trigger](https://img.shields.io/badge/trigger-estrutura_de_projeto_ou_arquitetura-6366f1?style=flat-square) ![version](https://img.shields.io/badge/version-1.0.0-94a3b8?style=flat-square)
+
+Arquitetura por feature, otimizada para desenvolvimento assistido por IA. Agnóstica de stack (Python, TS/JS, Go, Rust, Java).
+
+| Princípio | O quê |
+|-----------|-------|
+| **Co-location radical** | Tudo da feature fica na pasta da feature — handlers, UI, testes, migrations, fixtures |
+| **Regra do 3** | Código vai para `shared/` só após 3 módulos usarem o mesmo (evita abstração prematura) |
+| **`shared/` é infra, não utils** | Sem pastas-lixeira; só DB, logger, HTTP, auth, fila, contratos |
+| **Módulo nunca importa módulo** | Comunicação entre módulos via contratos em `shared/contracts/`; import cruzado falha no build |
+| **MODULE.md por módulo** | Arquivo de ~50 linhas por pasta de feature — agente lê 1 arquivo e entende o módulo inteiro |
+| **AGENTS.md na raiz** | Primeiro arquivo que o agente lê; descreve layout, comandos e convenções |
+
+Inclui templates prontos para MODULE.md, AGENTS.md, scaffold de módulo e configs de enforcement de fronteira por stack (Python/TS/Go/Rust/Java).
 
 ---
 
@@ -84,6 +102,7 @@ Copie a pasta da skill para `.claude/skills/` no seu projeto e registre no `CLAU
 ```md
 ## Skills disponíveis
 - `error-memory` — memória persistente de erros
+- `feature-first` — arquitetura por feature, otimizada para IA
 - `frontend-foundations` — fundações e auditoria de frontend
 - `spec-creator` — spec-driven development
 ```

@@ -41,10 +41,11 @@ Regra prática: se a feature vai gerar **5+ arquivos ou envolver 2+ pessoas/sess
 
 ---
 
-## Fluxo das 8 fases
+## Fluxo completo
 
 ```
 [INPUT] Descrição da funcionalidade
+  ↓ [SETUP] Cria pasta da spec + materializa agentes na pasta da spec
   ↓ [FASE 0] Discovery + Entrevista          → phases/phase-0-interview.md
   ↓ [FASE 1] SPEC.md        (POR QUÊ)        → phases/phase-1-spec.md
   ↓ [FASE 2] REQUIREMENTS.md  (O QUÊ)        → phases/phase-2-requirements.md
@@ -55,7 +56,7 @@ Regra prática: se a feature vai gerar **5+ arquivos ou envolver 2+ pessoas/sess
   ↓ [FASE 7] START.md         (HANDOFF)      → phases/phase-7-start.md
 ```
 
-Toda transição (exceto FASE 6 → 7, que é automática) **requer aprovação explícita do usuário**. "Parece bom" não conta — aguarde "aprovado", "pode ir" ou equivalente.
+Cada transição entre fases (0-6) é gateada pelo **`spec-reviewer`** (agente interno da skill) — **não por aprovação humana**. Após cada fase, o documento produzido é submetido ao revisor; se APROVADO, avança automaticamente. Humanos só são acionados via escalação: ambiguidade de domínio, política de negócio, ou após 3 rejeições consecutivas. A FASE 7 é automática após FASE 6.
 
 ---
 
@@ -84,25 +85,26 @@ Toda transição (exceto FASE 6 → 7, que é automática) **requer aprovação 
 [spec-creator dispara]
 ```
 
-A skill executa FASE 0 (discovery silenciosa + entrevista focada no que não é derivável do código), depois gera cada documento em sequência:
+A skill executa o SETUP primeiro (cria pasta, materializa agentes), depois FASE 0 e cada documento em sequência. O `spec-reviewer` gateia cada transição automaticamente:
 
 ```
-FASE 0 → identifica stack, descobre que projeto usa FastAPI + PostgreSQL + Redis
+SETUP → cria .claude/specs/order-notifications/ + agents/
+      → materializa orchestrator.md, code-reviewer.md, developer.md com placeholders preenchidos
+
+FASE 0 → identifica stack (FastAPI + PostgreSQL + Redis)
        → pergunta apenas: integrações externas, SLA, escopo negativo, prazo
-       → "posso avançar para FASE 1?"
+       → spec-reviewer avalia → APROVADO → avança para FASE 1
 
-FASE 1 → gera .claude/specs/order-notifications/SPEC.md
-       → problema, solução em alto nível, valor, riscos, escopo negativo
-       → "revisa e diz se posso avançar para REQUIREMENTS?"
+FASE 1 → gera SPEC.md: problema, solução em alto nível, valor, riscos, escopo negativo
+       → spec-reviewer avalia → APROVADO → avança para FASE 2
 
-FASE 2 → REQUIREMENTS.md
-       → User stories MoSCoW, ACs verificáveis, RNFs com métrica
+FASE 2 → REQUIREMENTS.md: User stories MoSCoW, ACs verificáveis, RNFs com métrica
        → matriz de rastreabilidade US ↔ RF ↔ RNF ↔ RN
 
 ... e assim por diante até FASE 7 (START.md).
 ```
 
-Cada aprovação sua = avanço de 1 fase. Se algo não está bom, volta à fase anterior e refaz.
+Humanos só são acionados quando o `spec-reviewer` escala: ambiguidade de domínio, política de negócio, ou após 3 rejeições consecutivas do mesmo documento.
 
 ---
 
@@ -117,10 +119,37 @@ Cada aprovação sua = avanço de 1 fase. Se algo não está bom, volta à fase 
 ├── TASKS.md                  # Fase 5 — plano de execução
 ├── REVIEW-FINAL.md           # Fase 6 — review da spec completa
 ├── START.md                  # Fase 7 — handoff para implementação
+├── agents/                   # Agentes de implementação (gerados no SETUP)
+│   ├── orchestrator.md
+│   ├── code-reviewer.md
+│   └── developer.md
 └── adrs/                     # Architecture Decision Records
     ├── ADR-001-<tema>.md
     └── ADR-002-<tema>.md
 ```
+
+---
+
+## Agentes
+
+A skill opera com dois tiers de agentes:
+
+**Agentes da skill** (vivem em `.claude/skills/spec-creator/agents/`):
+| Agente | Papel |
+|--------|-------|
+| `spec-reviewer.md` | Gatekeeper das fases 0-6 — avalia cada documento e aprova/rejeita/escala |
+| `orchestrator.md` | **Template** — copiado para a pasta da spec no SETUP |
+| `code-reviewer.md` | **Template** — copiado para a pasta da spec no SETUP |
+| `developer.md` | **Template** — copiado para a pasta da spec no SETUP |
+
+**Agentes da spec** (vivem em `.claude/specs/<feature>/agents/`, gerados no SETUP):
+| Agente | Papel |
+|--------|-------|
+| `orchestrator.md` | Coordena a implementação desta feature específica |
+| `code-reviewer.md` | Revisa cada task desta feature |
+| `developer.md` | Implementa cada task desta feature |
+
+Os agentes da spec são **artefatos da spec** — vivem com ela e são consumidos pela sessão de implementação a partir do `START.md`. O `spec-reviewer` **não** vai junto; ele só existe durante a criação da spec.
 
 ---
 
@@ -174,7 +203,7 @@ A skill **carrega uma fase por vez** — não tenta ter todas em contexto simult
 | G-004 | Review da FASE 6 cobrir implementação | Review cobre a spec (consistência, cobertura, gaps) |
 | G-005 | Salvar SPEC/REQ na raiz ou em `docs/` | Tudo em `.claude/specs/<feature>/` |
 | G-006 | START.md antes da REVIEW FINAL | Só na FASE 7 |
-| G-007 | Avançar de fase sem aprovação | Aguarde "ok", "aprovado" |
+| G-007 | Escalar para o usuário em cada fase | Gates são do `spec-reviewer`; humano só entra via escalação |
 | G-008 | START.md com tasks "em andamento" | Todas pendentes; TASK-001 é a próxima |
 | G-009 | Assumir stack ao invés de descobrir | FASE 0 existe para isso |
 | G-010 | Forçar seções irrelevantes do template | Use a seção "Adaptação" de cada phase file |
@@ -242,7 +271,7 @@ Cada phase file tem uma seção "Adaptação" documentando o que pode ser cortad
 |-------|-----------------|
 | [frontend-foundations](../frontend-foundations/) | Audita projeto → relatório vira input do spec-creator para refatoração |
 | [error-memory](../error-memory/) | Consultado em decisões de infra/deploy durante DESIGN |
-| [frontend-design](../frontend-design/) | Se a feature tem UI, consultado ao decidir visual |
+| [feature-first](../feature-first/) | Consultado durante DESIGN quando há dúvida de arquitetura — feature-first define o layout de módulos que o DESIGN.md vai adotar |
 
 **Fluxo recomendado para refatoração grande:**
 ```
