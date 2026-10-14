@@ -197,10 +197,12 @@ Leia o README/CLAUDE.md do projeto. Para cada tecnologia mencionada, verifique: 
 **Observação.** `backgroundColor: '#F59E0B'` em 12 lugares. Quando o designer muda o amarelo da marca, você edita 12 arquivos, esquece 2, a app fica inconsistente.
 
 **Regra.**
+- **Antes de definir tokens, decida o esquema de cores** (light / dark / system-adaptive / monocromático de marca) com base no tipo de aplicação, não no gosto. Leitura longa, e-commerce, médico/jurídico, infantil/sênior → tipicamente **light**. Ferramentas dev, edição de mídia, consumo noturno → tipicamente **dark**. App genérico com público variado → considere **system-adaptive**. Ver rubrica completa em [structure.md § Escolhendo o esquema](structure.md#escolhendo-o-esquema-light--dark--system-adaptive). Dual-theme (light+dark coexistindo) dobra o custo de design e QA — só adote com demanda real, não "para ficar moderno". Documente a escolha em ADR.
 - Cores brand, estados, tipografia, espaçamento, radius, shadows vivem como **CSS custom properties** em `index.css` (ou equivalente no framework de estilo)
-- Nome semântico sempre que possível: `--primary`, `--destructive`, `--surface-1`. Nome cru (`--ember`) é aceitável se tem história/branding
+- Nome semântico sempre que possível: `--primary`, `--destructive`, `--surface-1`. Nome cru (`--ember`) é aceitável se tem história/branding. Nomes semânticos são o que permite trocar de esquema sem reescrever componente.
 - Tailwind v4 consome tokens via `@theme` (nativo). Tailwind v3 via `theme.extend.colors` no config
 - **Zero hex/rgba hardcoded** em componentes — exceção única: `lib/colors.ts` para paletas enumeradas (ex: paleta de cores de cliente)
+- **Contraste mínimo WCAG AA** (4.5:1 texto, 3:1 UI grande) verificado com ferramenta, não no olho — vale para qualquer esquema
 
 **Teste.**
 ```bash

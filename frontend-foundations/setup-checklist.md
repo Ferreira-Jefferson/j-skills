@@ -29,8 +29,20 @@ npm install
 
 ## 2. Estilo
 
+### 2.0 — Decidir o esquema de cores (antes dos tokens)
+
+**Não pule.** Antes de escrever um único hex, decida o esquema com base no tipo de aplicação. Não há "padrão moderno é dark" — cada esquema serve a um contexto. Use a rubrica em [structure.md § Escolhendo o esquema](structure.md#escolhendo-o-esquema-light--dark--system-adaptive).
+
+- [ ] Identifique: tipo de conteúdo (leitura longa? mídia? dados? código?), contexto de uso (ambiente iluminado? noturno? misto?), público (idoso? infantil? profissional especializado?), convenção do setor (medicina/jurídico → light; ferramenta dev → dark)
+- [ ] Escolha **um** dos quatro: **light** / **dark** / **system-adaptive (dual)** / **esquema único alinhado à marca**
+- [ ] Se for **dual-theme**, confirme: existe usuário real alternando? há budget para QA em ambos? ilustrações/imagens funcionam nos dois? Se "não" a alguma, escolha esquema único.
+- [ ] Escreva **ADR-002 do esquema de cores**: "esquema X porque público Y, contexto Z" — para que ninguém reabra o debate sem dado novo
+- [ ] Verifique contraste WCAG AA para a paleta escolhida (texto ≥ 4.5:1, UI grande ≥ 3:1) com ferramenta, não no olho
+
+### 2.1 — Tokens e tooling
+
 - [ ] Instalar Tailwind v4 (ou versão equivalente do framework escolhido)
-- [ ] Criar `src/index.css` com **tokens** (ver [structure.md](structure.md) § Design System)
+- [ ] Criar `src/index.css` com **tokens** do esquema escolhido (ver [structure.md](structure.md) § Design System — exemplos A/B/C como referência, **adapte à sua marca**)
 - [ ] Instalar `clsx`, `tailwind-merge`, `class-variance-authority`
 - [ ] Criar `src/lib/utils.ts` com `cn()`
 - [ ] Escrever `.claude/docs/FRONTEND_STYLE_GUIDE.md` baseado em [styling-rules.md](styling-rules.md)
@@ -180,7 +192,8 @@ A partir daqui, **cada nova feature** deve:
 
 ```md
 - [ ] 1. Scaffolding + TS strict + alias @/
-- [ ] 2. Tailwind + tokens + style guide
+- [ ] 2.0 Decidir esquema de cores (light/dark/system) + ADR-002
+- [ ] 2.1 Tailwind + tokens do esquema escolhido + style guide
 - [ ] 3. Primitivos ui/ (shadcn ou hand-rolled) com testes
 - [ ] 4. types/, stores/, services/, data/ vazios prontos
 - [ ] 5. Hooks base (useClickOutside, useEscapeKey, useClipboard)

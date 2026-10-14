@@ -1,181 +1,143 @@
 ---
 name: error-memory
-description: >
-  Memória persistente de erros e soluções aprendidos. Evita retry loops desnecessários
-  consultando soluções já descobertas antes de tentar novamente.
-  Trigger AUTOMÁTICO: após 2 falhas consecutivas na mesma operação.
-  Trigger MANUAL: "consultar erros", "buscar solução", "já resolvemos isso?",
-  "error memory", "erros conhecidos", "learned errors", "known errors".
-version: 1.0.0
-date: 2026-04-16
+description: >-
+  OBRIGATÓRIO invocar quando: (a) uma operação falhou 2 vezes seguidas, (b) você acabou de
+  resolver um problema que exigiu 2+ tentativas, (c) está prestes a executar operação
+  arriscada (deploy, migration, git push, instalação de pacote no Windows). Mantém base
+  persistente por projeto em .claude/memory/errors/ com lookup por keywords. Args:
+  "lookup <keywords>", "save <categoria> <descrição>", "fail <ERR-NNN> <motivo>", "check".
+  Trigger words: "falhou de novo", "segunda tentativa", "não funciona", "retry", "já tentei",
+  "error", "erro", "failed", "exception", "traceback", "401", "403", "500", "ENOENT",
+  "EACCES", "consultar erros", "buscar solução", "erros conhecidos", "learned errors".
+version: 2.0.0
 user-invocable: true
 ---
 
 # Error Memory — Aprendizado Persistente de Erros
 
-Nunca repita o mesmo erro duas vezes. Este skill mantém uma base de conhecimento
-de problemas encontrados e suas soluções, organizada por categoria.
+Nunca repita o mesmo erro duas vezes. Base de problemas e soluções **por projeto** em
+`.claude/memory/errors/`, indexada por keywords. `<skill-dir>` abaixo é a pasta deste
+`SKILL.md`; os scripts rodam com `python <skill-dir>/scripts/<nome>.py` a partir da raiz
+do projeto (ou com `--root <projeto>`).
 
-## Princípio
+## A regra que mais importa
 
-```
-Falhou 2x no mesmo problema?
-  ↓
-PARE. Consulte a base de erros aprendidos.
-  ↓
-Encontrou? → Aplique a solução documentada.
-Não encontrou? → Continue resolvendo. Quando resolver, SALVE.
-```
+> **Solução documentada que falhou tem que ser marcada OBSOLETA na mesma sessão,
+> antes de você tentar outra coisa.**
 
-## Armazenamento
+Sem isso a base apodrece do jeito mais perigoso: a entrada acumula duas soluções, a
+antiga aparece primeiro, e o próximo lookup entrega justamente a que já não funciona —
+gerando um novo loop de erro. Uma base que mente é pior que base nenhuma.
 
-```
-.claude/memory/errors/
-├── INDEX.md                 # Índice mestre — lookup rápido por keywords
-├── supabase.md              # Supabase CLI, migrations, deploy, secrets
-├── git.md                   # Git, branches, commits, push/pull
-├── deploy.md                # Vercel, Cloud Run, Edge Functions deploy
-├── typescript.md            # TypeScript, build, types, compilation
-├── database.md              # SQL, PostgreSQL, RLS, policies, queries
-├── runtime.md               # Deno, Node, Python, runtime errors
-├── network.md               # HTTP, API, CORS, timeouts, auth
-├── windows.md               # Windows-specific, WSL, paths, permissions
-├── tooling.md               # MCP, Playwright, CLI tools, packages
-└── other.md                 # Não categorizado
-```
+## Roteamento de args
 
-## Workflow 1: LOOKUP (Automático — após 2 falhas)
+| Args | Ação |
+|---|---|
+| `lookup <keywords...>` | Workflow 1 — buscar |
+| `save <categoria> <descrição...>` | Workflow 2 — registrar |
+| `fail <ERR-NNN> <o que aconteceu>` | Workflow 3 — marcar solução como obsoleta |
+| `check` | Rodar `<skill-dir>/scripts/integrity.py` |
+| `list <categoria>` / `stats` | Listar / estatísticas |
+| (vazio) | Mostrar status da base (ou criá-la, se não existir) |
 
-Quando uma operação falhar **2 vezes seguidas**, execute este fluxo:
+## Workflow 1 — LOOKUP (obrigatório após 2 falhas e antes de operação arriscada)
 
-### Passo 1 — Extrair keywords do erro
-```
-Identifique 3-5 keywords do erro:
-- Código de erro (401, ENOENT, TypeError)
-- Ferramenta (supabase, git, vercel, npm)
-- Operação (deploy, push, migrate, build)
-- Mensagem chave (permission denied, not found)
-```
+1. **Extraia 3-5 keywords**: código de erro (`401`, `ENOENT`), ferramenta (`git`,
+   `docker`), operação (`deploy`, `push`), trecho literal da mensagem.
+2. **Leia `.claude/memory/errors/INDEX.md`** com a tool Read e procure as keywords.
+   Nunca teste a existência do arquivo com caminho relativo no shell — dá falso negativo.
+   Não existe? A base ainda não foi criada: siga resolvendo e crie-a no save.
+3. **Abra o arquivo de categoria** e localize a entrada pelo ID.
+4. **Cheque o campo `Status` ANTES de aplicar:**
+   - `ATIVA` → aplique.
+   - `OBSOLETA` → **não tente**. Leia o motivo e vá para a solução que a substituiu.
+   - `ATIVA — não re-verificada` → pode aplicar, mas trate como hipótese; se falhar, é
+     caso de `fail` (Workflow 3), não de tentar de novo.
+5. **Confira o fingerprint de ambiente** (versão de CLI, runtime, SO). Solução registrada
+   para `cli v2.22` pode não valer em `v2.72` — divergiu, suspeite.
+6. **Reporte o desfecho**: funcionou → atualize `Última vez` e `Vezes atingido`.
+   Não funcionou → **Workflow 3, imediatamente**.
 
-### Passo 2 — Buscar no INDEX.md
-```
-Leia .claude/memory/errors/INDEX.md
-Procure as keywords na tabela de índice
-```
+Não achou nada? Consulte `.claude/KNOWN_ISSUES.md` se o projeto tiver; depois continue
+resolvendo e registre no fim (Workflow 2).
 
-### Passo 3a — ENCONTROU: Aplicar solução
-```
-1. Leia o arquivo da categoria indicada no índice
-2. Localize a entrada pelo ID do erro
-3. Aplique a solução documentada
-4. Se a solução não funcionar mais, ATUALIZE a entrada com a nova solução
-5. Atualize "last_seen" e "times_hit" na entrada
-```
+## Workflow 2 — SAVE (após resolver algo que levou 2+ tentativas)
 
-### Passo 3b — NÃO ENCONTROU: Continuar e salvar
-```
-1. Continue tentando resolver o problema
-2. Quando resolver, execute o Workflow 2: SAVE
-```
+**Antes de criar ID novo, procure duplicata.** Busque as keywords no INDEX. Se já existe
+entrada para o mesmo problema, **atualize aquela entrada** — nunca crie uma segunda.
 
-## Workflow 2: SAVE (Após resolver um problema novo)
+1. **Classifique** pela tabela de [categories.md](categories.md).
+2. **Pegue o próximo ID** com `python <skill-dir>/scripts/integrity.py --next-id`. Nunca
+   estime o ID "de olho" no arquivo — é assim que dois erros acabam com o mesmo ID.
+3. **Escreva a entrada** no fim do arquivo de categoria, no formato de
+   [error-entry-template.md](error-entry-template.md). Campos obrigatórios: Keywords,
+   Status, Ambiente, Sintoma literal, Causa raiz, Solução copiável, "Como saber que voltou
+   a quebrar".
+4. **Sem segredo na base.** Token, chave, senha ou URL assinada viram o nome da variável
+   (`$API_TOKEN`). A base é lida por todo agente e às vezes vai para o git.
+5. **Adicione a linha no INDEX**, dentro da tabela — nunca depois de uma seção posterior
+   (linha apendada lá embaixo se perde numa reescrita).
+6. **Rode `python <skill-dir>/scripts/integrity.py`.** Saiu diferente de zero, conserte
+   antes de seguir.
 
-Quando resolver um problema que exigiu 2+ tentativas e NÃO estava na base:
+Base ainda não existe? Crie `.claude/memory/errors/INDEX.md` com o cabeçalho de
+[categories.md](categories.md#index) e o arquivo de categoria na hora do primeiro save.
 
-### Passo 1 — Classificar o erro
-```
-Determine a categoria usando a tabela abaixo:
+## Workflow 3 — FAIL (a solução documentada não funcionou)
 
-| Categoria    | Quando usar                                          |
-|-------------|------------------------------------------------------|
-| supabase    | CLI, migrations, deploy functions, secrets, link     |
-| git         | Commits, branches, merge, push, pull, hooks          |
-| deploy      | Vercel, Cloud Run, GCloud, CI/CD                     |
-| typescript  | tsc, types, build errors, Vite, ESLint               |
-| database    | SQL, PostgreSQL, RLS, policies, triggers, functions   |
-| runtime     | Deno, Node.js, Python, import errors, execution       |
-| network     | HTTP status, CORS, timeouts, fetch, API calls         |
-| windows     | WSL, paths, permissions, Device Guard, line endings   |
-| tooling     | MCP servers, Playwright, npm/pnpm, CLI tools          |
-| other       | Não se encaixa em nenhuma categoria acima              |
-```
+Este é o workflow que impede o loop. Execute **na hora**, antes de tentar outra abordagem:
 
-### Passo 2 — Criar a entrada no arquivo de categoria
+1. Na entrada, mude o campo: `| **Status** | OBSOLETA desde AAAA-MM-DD — <motivo> |`
+2. Renomeie a seção `### Solução` para `### Solução obsoleta (AAAA-MM-DD)` e deixe uma
+   linha explicando **por que parou de funcionar** (versão nova, endpoint mudou, permissão
+   revogada). O histórico fica — o que não pode é parecer válido.
+3. Quando achar a solução nova, adicione `### Solução (AAAA-MM-DD)` **acima** da obsoleta
+   e volte o Status para `ATIVA (verificada em AAAA-MM-DD)`.
+4. Atualize a descrição no INDEX se a keyword de busca mudou.
 
-Leia o template em `@.claude/skills/error-memory/error-entry-template.md` e
-preencha os campos. Adicione a entrada ao FINAL do arquivo de categoria
-correspondente (ex: `.claude/memory/errors/supabase.md`).
+Uma entrada tem **exatamente uma** solução ativa, sempre acima das obsoletas.
 
-Se o arquivo de categoria não existir, crie-o com o header padrão:
-```markdown
-# Erros Aprendidos — [CATEGORIA]
+## Integridade
 
-> Auto-gerenciado pelo skill error-memory. Não edite o INDEX.md manualmente.
-
----
+```bash
+python <skill-dir>/scripts/integrity.py            # checa a base
+python <skill-dir>/scripts/integrity.py --next-id  # próximo ID livre
 ```
 
-### Passo 3 — Atualizar o INDEX.md
+Detecta ID duplicado, linha de índice sem entrada, entrada fora do índice, entrada sem
+Status e credencial colada na base. Sai com código 1 se achar problema. Rode **depois de
+todo save** e sempre que um lookup devolver algo que parece errado.
 
-Adicione uma linha na tabela do INDEX.md com o formato:
-```
-| ERR-NNN | keywords separadas por vírgula | categoria | descrição curta |
-```
+## Ativação automática
 
-O ID é sequencial global (ERR-001, ERR-002, ...). Verifique o último ID no INDEX.md
-antes de criar um novo.
+O hook `PostToolUseFailure` (script `scripts/failure_hook.py`, configurado no
+`settings.json` do usuário) conta as falhas de shell por operação e só injeta o lembrete
+a partir da **2ª falha da mesma operação** — falha única e comandos que saem 1 por design
+(`grep` sem match, `diff`) ficam em silêncio. Detalhes, configuração e o que conta como
+"mesma operação": [auto-trigger-rules.md](auto-trigger-rules.md).
 
-## Workflow 3: MAINTAIN (Gerenciamento de arquivos)
+## Manutenção
 
-Execute este workflow quando:
-- Um arquivo de categoria ultrapassar **80 entradas** ou **300 linhas**
-- O usuário pedir para organizar/limpar a base de erros
-- Houver entradas duplicadas ou obsoletas
+- Arquivo de categoria acima de ~300 linhas → divida por subcategoria (`cli.md` →
+  `cli-auth.md`, `cli-deploy.md`) e atualize o INDEX.
+- Entrada sem uso há mais de 6 meses → mova para uma seção "Arquivo" no fim do arquivo.
+- Solução obsoleta **nunca** é deletada: serve de histórico e evita que alguém a
+  redescubra como novidade.
 
-### Regras de manutenção
+## Regras críticas
 
-1. **Arquivo grande demais (>300 linhas)?**
-   - Divida por subcategoria criando arquivos como `supabase-cli.md`, `supabase-migrations.md`
-   - Atualize o INDEX.md para apontar para os novos arquivos
-   - Delete o arquivo original após a divisão
-
-2. **Entradas duplicadas?**
-   - Mantenha a mais completa, remova a outra
-   - Atualize o INDEX.md
-
-3. **Solução obsoleta (não funciona mais)?**
-   - Marque como `[DEPRECATED]` no título
-   - Adicione a nova solução como entrada separada
-   - NÃO delete a entrada antiga (serve como histórico)
-
-4. **Entrada nunca mais atingida (>6 meses sem last_seen)?**
-   - Mova para uma seção "Arquivo" no final do arquivo de categoria
-
-## Regras Críticas
-
-1. **NUNCA ignore este skill após 2 falhas.** A consulta é obrigatória.
-2. **SEMPRE salve erros novos.** Se levou 2+ tentativas, merece ser documentado.
-3. **Keywords são a chave.** Use keywords específicas e técnicas no INDEX.md.
-4. **Mantenha soluções atualizadas.** Se uma solução parou de funcionar, atualize-a.
-5. **Um erro = uma entrada.** Não agrupe problemas diferentes na mesma entrada.
-6. **Prefira soluções completas.** Inclua o comando exato, não apenas "rode o comando X".
-7. **Contexto importa.** Inclua o ambiente (Windows, WSL, versão) quando relevante.
+1. Após 2 falhas, a consulta é **obrigatória** — mesmo que você ache que sabe a resposta.
+2. Solução que falhou vira `OBSOLETA` na mesma sessão. Sem exceção.
+3. Um problema = uma entrada. Duplicata é bug, não redundância.
+4. Keywords específicas e técnicas; keyword genérica não é encontrada.
+5. Registre a **causa raiz**, não só o comando que resolveu.
+6. Sempre o fingerprint de ambiente — é o que permite julgar se a solução envelheceu.
+7. Só salve solução **verificada**; erro trivial (typo, path errado) e bug de lógica de
+   negócio não entram.
+8. Nunca grave segredo na base.
 
 ## Integração com KNOWN_ISSUES.md
 
-O arquivo `.claude/KNOWN_ISSUES.md` já existente no projeto é complementar:
-- **KNOWN_ISSUES.md** = problemas do PROJETO (ambiente, infra, ferramentas bloqueadas)
-- **error-memory** = problemas do FLUXO DE TRABALHO (erros que o Claude encontra ao executar tarefas)
-
-Se um erro é específico do projeto (ex: "Device Guard bloqueia supabase no Windows"),
-ele deve estar em AMBOS: KNOWN_ISSUES.md (para humanos) e error-memory (para o Claude).
-
-## Comandos do Usuário
-
-| Comando | Ação |
-|---------|------|
-| `/error-memory` | Abre este skill, mostra status da base |
-| "consultar erros de [X]" | Busca no INDEX.md por keywords |
-| "limpar base de erros" | Executa Workflow 3: MAINTAIN |
-| "mostrar erros de [categoria]" | Lista todas entradas de uma categoria |
-| "estatísticas de erros" | Conta entradas por categoria, mais frequentes |
+`.claude/KNOWN_ISSUES.md` (quando o projeto tem) é complementar: problemas estruturais do
+**projeto** (infra, ferramenta bloqueada), escritos para humanos. `error-memory` é o
+**fluxo de trabalho** do Claude. Um problema que é os dois entra nos dois lugares.

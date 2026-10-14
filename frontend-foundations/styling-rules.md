@@ -11,20 +11,23 @@ CSS custom properties definem tudo que muda com marca/tema: cores, radius, typog
 
 ```css
 :root {
-  --primary:      #F59E0B;
-  --destructive:  #F43F5E;
+  /* valores abaixo são placeholders — adapte ao esquema escolhido */
+  /* (light, dark ou system-adaptive — ver structure.md § Design System) */
+  --primary:      /* cor primária da marca */;
+  --destructive:  /* cor de erro/destrutiva */;
+  --surface-1:    /* superfície principal (claro ou escuro conforme esquema) */;
   --radius:       0.625rem;
-  --surface-1:    #0F0F12;
 }
 ```
 
-Componentes consomem via `var(--token)`, **nunca** literais hex/rgba.
+Componentes consomem via `var(--token)`, **nunca** literais hex/rgba. Os nomes dos tokens são **semânticos** (`--surface-1`, `--foreground`) — assim trocar de esquema é trocar valores, não trocar componentes.
 
 ### 2. Tailwind utility é a primeira opção
 Para layout, espaçamento, tipografia estática, responsividade, estados nativos (hover/focus/disabled).
 
 ```tsx
-<div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-zinc-800">
+{/* use tokens semânticos em hover/bg/text — nunca cores cruas (bg-zinc-800, bg-white) */}
+<div className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[var(--muted-surface)]">
 ```
 
 Se 80% do seu CSS cabe em utilities, está bem.
@@ -52,8 +55,9 @@ Esse padrão é o que o shadcn usa — fica pronto para adotar shadcn depois se 
 Padrões complexos de design system que apareceriam em muitos utilities Tailwind espalhados. Ficam em `index.css` documentados.
 
 ```css
+/* nomes semânticos — funcionam em qualquer esquema (light/dark/dual) */
 .forge-card {
-  background: var(--surface-1);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
   position: relative;
@@ -76,7 +80,7 @@ Derivados de props/state em runtime. Jamais para padrões estáticos.
 <div style={{ transform: `translateX(${offset}px)` }} />
 
 // ❌ NÃO — estático, deveria ser Tailwind ou classe
-<div style={{ padding: '20px', backgroundColor: '#0F0F12' }} />
+<div style={{ padding: '20px', backgroundColor: '#123456' }} />
 ```
 
 ---

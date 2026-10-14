@@ -1,76 +1,117 @@
 # Regras de Ativação Automática
 
-Este documento define QUANDO e COMO o skill error-memory deve ser ativado
-automaticamente pelo Claude, sem necessidade de comando explícito do usuário.
+Quando e como a skill error-memory é ativada sem comando explícito do usuário.
 
-## Gatilho Primário: Regra das 2 Falhas
+## Mecanismo: hook `PostToolUseFailure` que conta falhas
+
+O gatilho é **sistêmico**, não memória comportamental: o hook roda a cada falha de
+shell e decide sozinho se é hora de lembrar o Claude.
 
 ```
-SE (mesma operação falhou 2 vezes consecutivas)
-  → ATIVAR error-memory Workflow 1: LOOKUP
-  → Buscar keywords do erro no INDEX.md
-  → Se encontrou: aplicar solução
-  → Se não encontrou: continuar resolvendo
+Bash/PowerShell falha (exit != 0)
+  ↓
+failure_hook.py recebe o payload (session_id, tool_input.command, is_interrupt)
+  ↓
+Reduz o comando a uma "operação" (ex.: `supabase db`, `git push`, `python run.py`)
+e soma 1 no contador da sessão (arquivo em <tmp>/claude-error-memory/<session>.json)
+  ↓
+1ª falha da operação → silêncio
+2ª+ falha da mesma operação → injeta additionalContext:
+  "[error-memory] `<operação>` falhou Nx nesta sessão. ANTES da próxima tentativa:
+   Skill(error-memory, "lookup <keywords>")..."
 ```
 
-### O que conta como "mesma operação"?
+Por que contar no hook: a versão anterior injetava o lembrete em **toda** falha, inclusive
+`grep` sem match e checagens que saem 1 por design. Lembrete em todo erro vira ruído, e
+ruído é ignorado. Também não depende do Claude contar certo.
 
-- Mesmo comando executado 2x com o mesmo tipo de erro
-- Mesmo tipo de abordagem tentada 2x (ex: instalar pacote de 2 formas, ambas falharam)
-- Mesmo arquivo editado 2x tentando corrigir o mesmo bug
+### Configuração (uma vez, no `settings.json` do usuário — vale para todos os projetos)
 
-### O que NÃO conta?
+`~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"<caminho-absoluto>/python.exe\" \"<home>/.claude/skills/error-memory/scripts/failure_hook.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Use o caminho absoluto do Python.** Se o `settings.json` define `env.PATH`, esse PATH
+substitui o do hook; sem o Python nele, o comando não acha `python` e o hook falha em
+silêncio (nenhum lembrete, nenhum arquivo de contagem). Para conferir: depois de duas
+falhas da mesma operação, deve existir `<tmp>/claude-error-memory/<session_id>.json`.
+
+Não repita o bloco no `.claude/settings.json` de cada projeto: os dois rodariam e o
+lembrete sairia duplicado. Hook declarado no frontmatter da skill não serve aqui — ele só
+é registrado depois que a skill é invocada, e o objetivo é justamente fazê-la ser invocada.
+
+O hook nunca quebra a sessão: payload inválido ou erro interno saem 0 sem saída.
+
+## O que conta como "mesma operação"
+
+O hook usa `programa subcomando` do último trecho encadeado (`cd x && ...` é ignorado;
+prefixos `npx`, `sudo`, `env`, `VAR=1` também):
+
+| Comando | Operação |
+|---|---|
+| `npx supabase db push --linked` | `supabase db` |
+| `git push origin main` | `git push` |
+| `python a/b/run.py \| head` | `python run.py` |
+| `python -m pytest -n auto` | `python pytest` |
+
+**Ignorados** (exit != 0 é resposta, não falha): `grep`, `rg`, `diff`, `cmp`, `test`/`[`,
+`find`, `ls`, `git check-ignore|diff|grep|ls-files|rev-parse|merge-base|show-ref`, e
+falhas com `is_interrupt`.
+
+O julgamento do Claude continua valendo além do hook: a mesma abordagem tentada por dois
+caminhos (instalar um pacote de dois jeitos) ou o mesmo arquivo editado 2x para o mesmo
+bug também contam como "falhou 2x".
+
+### O que NÃO conta
 
 - Dois erros diferentes em operações diferentes
-- Uma falha seguida de sucesso parcial
-- Erros esperados (ex: teste que deve falhar)
+- Erro esperado (teste que deve falhar, comando de checagem)
 
-## Gatilhos Secundários
+## Gatilhos secundários
 
-### Antes de operações de risco
-```
-SE (operação é deploy, migration, push, ou schema change)
-  → CONSULTAR error-memory para keywords: [operação] + [ambiente]
-  → Se há erros registrados para essa combinação: mostrar ao usuário
-```
+### Antes de operação de risco
 
-### Ao encontrar erro conhecido
 ```
-SE (mensagem de erro contém keywords de 3+ entradas no INDEX.md)
-  → SUGERIR: "Encontrei N erros similares na base. Consultar?"
+SE (operação é deploy, migration, push ou mudança de schema)
+  → LOOKUP com keywords: [operação] + [ambiente]
+  → Se há entrada ATIVA para essa combinação: aplique/mostre antes de rodar
 ```
 
-## Fluxo de Salvamento Automático
+### Depois de resolver
 
 ```
 SE (problema resolvido APÓS 2+ tentativas)
-E  (solução NÃO estava no error-memory)
-ENTÃO:
-  1. Classificar o erro (categoria)
-  2. Extrair keywords da mensagem de erro
-  3. Documentar sintoma, causa raiz, solução
-  4. Salvar no arquivo de categoria
-  5. Atualizar INDEX.md
-  6. Informar usuário: "Erro salvo na base: ERR-NNN [descrição]"
+E  (solução NÃO estava na base, ou estava OBSOLETA)
+ENTÃO: Workflow 2 (SAVE) e informe "Erro salvo na base: ERR-NNN <descrição>"
 ```
 
-## Integração com KNOWN_ISSUES.md
+## Ordem de consulta
 
-O CLAUDE.md do projeto já menciona consultar `.claude/KNOWN_ISSUES.md` após 2 falhas.
-O error-memory complementa isso:
+1. error-memory (mais rápido, mais específico)
+2. `.claude/KNOWN_ISSUES.md`, se o projeto tiver (contexto estrutural, escrito por humanos)
+3. Nenhum dos dois: resolva e salve no error-memory
 
-1. **KNOWN_ISSUES.md** → problemas estruturais do projeto (documentado por humanos)
-2. **error-memory** → problemas encontrados durante execução (documentado automaticamente)
+## Anti-patterns
 
-**Ordem de consulta:**
-1. Primeiro: error-memory (mais rápido, mais específico)
-2. Segundo: KNOWN_ISSUES.md (mais abrangente, contexto do projeto)
-3. Se não achou em nenhum: resolver e salvar no error-memory
-
-## Anti-Patterns (NÃO fazer)
-
-1. **NÃO salvar erros triviais** (typo, arquivo não encontrado por path errado)
-2. **NÃO salvar erros de lógica de negócio** (bug no código do usuário)
-3. **NÃO consultar para erros únicos** (primeira falha → tente de novo normalmente)
-4. **NÃO ignorar a base quando ela tem a solução** (economia de tokens é o objetivo)
-5. **NÃO salvar soluções incompletas** (se não testou, não salve)
+1. **Salvar erro trivial** (typo, path errado) ou bug de lógica de negócio.
+2. **Consultar na 1ª falha** — tente de novo normalmente; o hook avisa na 2ª.
+3. **Ignorar a base quando ela tem a solução.**
+4. **Salvar solução não verificada.**
+5. **Tentar de novo uma solução OBSOLETA** em vez de seguir para a que a substituiu.

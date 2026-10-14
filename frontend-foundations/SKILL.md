@@ -7,8 +7,8 @@ description: >
   frontend, ao auditar um existente, ao pedir "boas práticas React/Vue/Svelte",
   "como organizar frontend", "estabelecer arquitetura frontend", "setup de projeto",
   ou antes de escrever a primeira task de UI de uma feature.
-version: 1.0.0
-date: 2026-04-17
+version: 1.1.0
+date: 2026-05-24
 user-invocable: true
 ---
 
@@ -65,14 +65,16 @@ Cada princípio expandido em [principles.md](principles.md).
 ```
 1. Escolha stack   → setup-checklist.md §1
 2. Crie estrutura   → structure.md
-3. Defina tokens   → structure.md §Design System
-4. Regras de estilo → styling-rules.md
-5. Primeiros primitivos (shadcn ou hand-rolled)
-6. Hooks utilitários de base (useClickOutside, useEscapeKey, useClipboard)
-7. ErrorBoundary + Zod em forms
-8. Estratégia de testes (pirâmide) → testing-strategy.md
-9. CI com thresholds + lint
-10. ADR-001 do stack
+3. DECIDA o esquema de cores (light/dark/system) com base no tipo de app, NÃO no gosto
+   → structure.md §Escolhendo o esquema + ADR-002
+4. Defina tokens do esquema escolhido → structure.md §Design System
+5. Regras de estilo → styling-rules.md
+6. Primeiros primitivos (shadcn ou hand-rolled)
+7. Hooks utilitários de base (useClickOutside, useEscapeKey, useClipboard)
+8. ErrorBoundary + Zod em forms
+9. Estratégia de testes (pirâmide) → testing-strategy.md
+10. CI com thresholds + lint
+11. ADR-001 do stack
 ```
 
 ## Fluxo sugerido para projeto existente (auditoria)
@@ -130,3 +132,4 @@ Detalhe em [structure.md](structure.md).
 5. **Zero `console.log` em código de produção.** Warnings/erros intencionais = `console.warn` / `console.error` com justificativa inline.
 6. **Test-first não é opcional** — se você está escrevendo componente sem um teste esboçado, pare.
 7. **Antes de criar, busque.** Sempre verifique `ui/`, `domain/`, `hooks/`, `lib/` antes de reinventar.
+8. **Esquema de cores é decisão, não default.** Antes de qualquer token, escolha entre light / dark / system-adaptive / monocromático de marca com base no **tipo de aplicação, público, contexto de uso e convenção do setor** — não em gosto pessoal nem em "moderno é dark". Médico/jurídico/leitura longa/e-commerce → tipicamente light. Dev tools/edição de mídia/consumo noturno → tipicamente dark. Documente em ADR. Rubrica em [structure.md § Escolhendo o esquema](structure.md#escolhendo-o-esquema-light--dark--system-adaptive).
