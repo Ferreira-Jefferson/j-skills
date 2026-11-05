@@ -29,12 +29,13 @@ __ONE_SENTENCE_DESCRIPTION_OF_WHAT_THIS_PROJECT_DOES__
 │       ├── migrations/        ← tabelas próprias do módulo
 │       ├── fixtures/
 │       └── tests/
-├── shared/                    ← infra não-opinada, compartilhada
-│   ├── db/
-│   ├── logger/
-│   ├── http_client/
-│   ├── queue/
-│   ├── auth/
+├── __COMMON_DIR__/            ← CAMADA COMUM (escolha o nome: shared/ | core/ | infra/ | lib/)
+│   ├── db/                    ← infra
+│   ├── logger/                ← infra
+│   ├── http_client/           ← infra
+│   ├── queue/                 ← infra
+│   ├── auth/                  ← infra
+│   ├── __SPECIALIST__/        ← especialista transversal NÃO-infra (ex: calc/, geo/)
 │   └── contracts/             ← schemas de evento entre módulos
 ├── tests/
 │   └── e2e/                   ← apenas testes que cruzam módulos
@@ -46,11 +47,27 @@ __ONE_SENTENCE_DESCRIPTION_OF_WHAT_THIS_PROJECT_DOES__
 
 ## Regras de fronteira (ENFORÇADAS NO BUILD)
 
-1. **Módulo nunca importa módulo.** `modules/<a>/` não pode importar `modules/<b>/`. Linter falha.
-2. **`shared/` nunca importa de `modules/`.** Infra não conhece features.
-3. **Regra do 3.** Código só vira `shared/` após 3 módulos usarem o mesmo.
-4. **Comunicação entre módulos:** via contrato/evento em `shared/contracts/`, nunca chamada direta.
-5. **Sem `utils/`, `common/`, `helpers/` em `shared/`.** Nomes específicos obrigatórios.
+1. **Módulo nunca importa módulo.** `modules/<a>/` não importa código *interno* de `modules/<b>/` — nem "emprestar o agente" de outra feature por parecer igual. Recrie dentro da própria feature. Linter falha.
+2. **A camada comum (`__COMMON_DIR__/`) nunca importa de `modules/`.** Infra/especialista não conhece features.
+3. **Reúso é imediato; promover algo novo segue a Regra do 3.** Capacidade já presente na camada comum: use no dia 1, não reescreva. Capacidade nova e incerta: duplique até a 3ª feature, depois promova. Capacidade obviamente transversal (DB, log, HTTP): já entra na camada comum.
+4. **Comunicação entre features:** via contrato/evento em `__COMMON_DIR__/contracts/`, nunca chamada direta.
+5. **Sem pastas-capacidade genéricas** (`utils/`, `common/`, `helpers/`, `misc/`) na camada comum — só especialistas nomeados. (O *nome da camada* em si pode ser `shared/`, `core/`, `infra/`.)
+6. **Consuma módulos pela interface pública** — o que o índice expõe ou os submódulos projetados para uso direto — nunca um interno *privado*. Faltou capacidade? Se é do módulo, expanda-o (não-quebrante); se é da feature, crie no slice consumindo o público.
+
+## Camada comum — especialistas disponíveis (REUSAR, não reescrever)
+
+> Localização: `__COMMON_DIR__/`.
+> **Antes de implementar qualquer capacidade numa feature, procure aqui primeiro.**
+> Reescrever um especialista que já existe (cliente de LLM, logger, DB…) é um erro de arquitetura.
+> Mantenha esta tabela atualizada: ao promover algo (Regra do 3) ou criar uma capacidade obviamente transversal, adicione a linha.
+
+| Especialista | Caminho | O que faz | Como importar |
+|---|---|---|---|
+| __NAME__ | `__COMMON_DIR__/db` | acesso a banco, transações | `__IMPORT_EXAMPLE__` |
+| __NAME__ | `__COMMON_DIR__/logger` | logger estruturado | `__IMPORT_EXAMPLE__` |
+| __NAME__ | `__COMMON_DIR__/llm` | chamada a modelos de IA | `__IMPORT_EXAMPLE__` |
+| __NAME__ | `__COMMON_DIR__/http_client` | HTTP com retry/timeout | `__IMPORT_EXAMPLE__` |
+| __NAME__ | `__COMMON_DIR__/__SPECIALIST__` | __WHAT_IT_DOES__ (ex: cálculo, geo) | `__IMPORT_EXAMPLE__` |
 
 ## Comandos
 
@@ -90,11 +107,12 @@ __CHECK_COMMAND__                 # ex: make check
 ## Fluxo para adicionar feature
 
 1. `./scripts/scaffold_module.sh <nome>`
-2. Preencher `MODULE.md` (propósito, entry points, deps).
-3. Escrever testes primeiro (se TDD obrigatório).
-4. Implementar.
-5. Rodar `__CHECK_COMMAND__` — deve passar.
-6. Commit.
+2. **Consultar a tabela "Especialistas da camada comum"** e listar o que a feature precisa — reusar o que já existe; escrever só o que é *próprio* da feature.
+3. Preencher `MODULE.md` (propósito, entry points, deps — incl. especialistas comuns consumidos).
+4. Escrever testes primeiro (se TDD obrigatório).
+5. Implementar.
+6. Rodar `__CHECK_COMMAND__` — deve passar.
+7. Commit.
 
 ## Fluxo para remover feature
 

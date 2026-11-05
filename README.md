@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Skills](https://img.shields.io/badge/skills-4-6366f1?style=for-the-badge)
+![Skills](https://img.shields.io/badge/skills-5-6366f1?style=for-the-badge)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-f97316?style=for-the-badge&logo=anthropic&logoColor=white)
 ![License](https://img.shields.io/badge/license-GPL--3.0-22c55e?style=for-the-badge)
 
@@ -22,6 +22,7 @@ j-skills/
 ├── error-memory/          # memória persistente de erros
 ├── feature-first/         # arquitetura por feature, otimizada para IA
 ├── frontend-foundations/  # fundações e auditoria de frontend
+├── plan-executor/         # execução paralela de plano de implementação
 └── spec-creator/          # spec-driven development
 ```
 
@@ -95,6 +96,29 @@ Inclui templates prontos para MODULE.md, AGENTS.md, scaffold de módulo e config
 
 ---
 
+### `plan-executor` ![trigger](https://img.shields.io/badge/trigger-"implemente_o_plano_X.md"-f97316?style=flat-square) ![version](https://img.shields.io/badge/version-1.0.0-94a3b8?style=flat-square)
+
+Execução de um plano **já existente** com agentes em paralelo. Onde `spec-creator` cria a spec, esta executa o plano — de qualquer origem (spec, issue, doc).
+
+```
+FASE 0  inventário do plano: features, arquivos escritos, dependências, provas candidatas
+FASE 1  mapa de paralelismo → EXEC-MAP.md (waves + WAVE 0 de fundação)
+FASE 2  por feature: plano de ação → gate 1 → execução → gate 2 → commit
+FASE 3  suite global, cobertura item-a-item do plano, cleanup, relatório
+```
+
+| Mecanismo | O quê |
+|-----------|-------|
+| **Teste de disjunção** | Duas features só rodam juntas se escrevem arquivos disjuntos, não consomem artefato uma da outra, não compartilham teste/fixture nem agregador. Dúvida = serializa |
+| **WAVE 0** | Tudo que colide (boilerplate, contratos, agregadores, migrations, deps) é feito pelo orquestrador antes de spawnar qualquer agente |
+| **Gate 1 — `plan-reviewer`** | Agente independente que revisa **e corrige** o plano de ação antes de qualquer linha de código |
+| **Gate 2 — `code-reviewer`** | Revisa a execução contra o plano aprovado + evidência da prova, antes do commit |
+| **Prova de conclusão falsificável** | Comando / teste nomeado / estado observável — e obrigatoriamente responde "qual cenário quebrado ainda passaria nisso?" |
+
+Nenhuma aprovação humana no caminho feliz; humano entra só via `ESCALAR`. Quadro de progresso atualizado a cada evento de agente.
+
+---
+
 ## Como usar
 
 Copie a pasta da skill para `.claude/skills/` no seu projeto e registre no `CLAUDE.md`:
@@ -104,6 +128,7 @@ Copie a pasta da skill para `.claude/skills/` no seu projeto e registre no `CLAU
 - `error-memory` — memória persistente de erros
 - `feature-first` — arquitetura por feature, otimizada para IA
 - `frontend-foundations` — fundações e auditoria de frontend
+- `plan-executor` — execução paralela de plano de implementação
 - `spec-creator` — spec-driven development
 ```
 

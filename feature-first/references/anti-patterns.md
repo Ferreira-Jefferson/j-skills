@@ -2,6 +2,8 @@
 
 Problemas comuns que aparecem na adoção do padrão, com sintoma, por que é ruim, e como corrigir.
 
+> **Nota de nomes:** `shared/` aqui é só um **nome de exemplo** da camada comum — ela pode se chamar `core/`, `infra/`, `lib/`. O que os anti-patterns abaixo banem são **pastas-capacidade genéricas** (`utils/`, `common/`, `helpers/`, `misc/`) *dentro* da camada comum, e **regra de negócio** nela — nunca o nome da camada em si.
+
 ## 1. `shared/utils/` ou `shared/common/` ou `shared/helpers/`
 
 **Sintoma:** pasta com nome genérico acumulando funções soltas de várias features.
@@ -12,8 +14,8 @@ Problemas comuns que aparecem na adoção do padrão, com sintoma, por que é ru
 - Vira acoplamento invisível: função em `utils` usada por 5 features cria dependência implícita.
 
 **Correção:**
-- Banir os nomes `utils`, `common`, `helpers`, `misc`, `core`, `base` em `shared/`.
-- Substituir por nomes específicos: `shared/date_formatting/`, `shared/currency/`, `shared/string_sanitization/`.
+- Banir os nomes `utils`, `common`, `helpers`, `misc` como **pastas-capacidade dentro da camada comum**. (Atenção: isto **não** é sobre o nome da própria camada — ela pode legitimamente se chamar `core/`, `shared/`, `infra/`. O alvo é a sub-pasta genérica que vira lixeira.)
+- Substituir por nomes específicos: `date_formatting/`, `currency/`, `string_sanitization/`.
 - Se o que está em `utils` é regra de negócio, mover de volta para o módulo que usa.
 
 ## 2. Bridge module
@@ -181,11 +183,56 @@ Problemas comuns que aparecem na adoção do padrão, com sintoma, por que é ru
 - AGENTS.md = para agentes; machine-readable, layout, comandos, convenções.
 - Detalhes vão em `.claude/docs/` ou `docs/`, linkados dos dois anteriores conforme relevância.
 
+## 13. Empréstimo de lógica entre features
+
+**Sintoma:** a feature `b` importa (ou copia-cola "por enquanto") o agente/handler/serviço *interno* da feature `a` porque "fazem a mesma coisa". Ex: `from modules.a.agent_b import run`.
+
+**Por que é ruim:**
+- É acoplamento de feature disfarçado de reúso. As duas features passam a evoluir juntas mesmo sendo responsabilidades distintas.
+- Quando `a` mudar o `agent_b` para o que *ela* precisa, quebra `b` — e ninguém esperava.
+- Frustra o teste da deleção: matar `a` agora quebra `b`.
+
+**Por que NÃO é o mesmo que usar a camada comum:** usar `llm_client`/`logger`/`db` é consumir uma capacidade *sem dono de feature*, projetada para ser compartilhada. O `agent_b` é **lógica da feature `a`** — tem dono, tem opinião sobre o domínio de `a`.
+
+**Correção:**
+- Recriar um agente próprio dentro de `b`. Duplicação de lógica de feature é barata e correta.
+- Se, com o tempo, 3 features tiverem um agente quase idêntico que é na verdade uma *capacidade transversal* (não regra de negócio), aí sim promova a parte genérica para a camada comum (Regra do 3) — deixando a regra de negócio em cada feature.
+
+## 14. Reescrever capacidade que já existe
+
+**Sintoma:** cada feature reimplementa do zero a chamada ao provedor de LLM, o logger, o acesso a DB — em vez de consumir o especialista que já está na camada comum. Frequentemente porque o agente **não sabia que o especialista existia**.
+
+**Por que é ruim:**
+- Duplica infra (não lógica de feature) — N implementações divergentes de retry/timeout/auth, cada uma com bugs próprios.
+- O oposto do anti-pattern 13: aqui o erro é *deixar de reusar* o que deveria ser reusado.
+
+**Correção:**
+- Antes de codar uma capacidade, **descobrir o ferramental comum**: ler a tabela de especialistas no `AGENTS.md` e olhar a camada comum. Reusar o que existe.
+- Manter o `AGENTS.md` com a lista de especialistas disponíveis e como importá-los — é o que torna o reúso descobrível para humanos e IA.
+- Capacidade obviamente transversal que ainda não existe (ex: cliente de LLM no projeto novo): criar **uma vez** na camada comum, não em cada feature.
+
+## 15. Furar a interface pública de um módulo
+
+**Sintoma:** `from modulo.interno_privado import _coisa` — importar um arquivo/símbolo que o módulo **não pretende** expor, só porque você precisa de um pedaço dele.
+
+**Não confundir com uso legítimo de submódulo público:** se o módulo *projetou* `provider`/`fallback`/etc. como entradas públicas (reexportadas, documentadas, sem prefixo `_`), usá-las é **correto** — elas são a interface, mesmo sendo arquivos. A violação é passar por cima da interface *pretendida*. Cabe ao agente distinguir um do outro para não gerar acoplamento incorreto.
+
+**Por que é ruim:**
+- Acopla a feature à *implementação privada* do módulo. O dono refatora o interno (direito dele — é privado) e sua feature quebra sem aviso.
+- Foge do contrato testável que o módulo oferece.
+
+**Correção:**
+- Descobrir a interface pública (o que `__init__`/`__all__` exporta, `MODULE.md`, submódulos sem `_`) e usar por ali. Na dúvida, trate como privado e use a fachada.
+- Se o público não tem o que precisa: **(a)** é capacidade do módulo → expor/expandir *no módulo*, não-quebrante; **(b)** é da feature → criar no slice consumindo o público.
+
 ## Checklist de saúde
 
 Rodar trimestralmente:
 
-- [ ] Nenhuma pasta chamada `utils`, `common`, `helpers`, `misc` em `shared/`?
+- [ ] Nenhuma pasta-capacidade chamada `utils`, `common`, `helpers`, `misc` dentro da camada comum?
+- [ ] Nenhuma feature importa lógica *interna* de outra feature (anti-pattern 13)?
+- [ ] Capacidades comuns (LLM, log, DB) são reusadas, não reescritas por feature (anti-pattern 14)?
+- [ ] `AGENTS.md` lista os especialistas da camada comum e como usá-los?
 - [ ] Todo módulo tem `MODULE.md` atualizado (tabelas, contratos, entry points)?
 - [ ] Nenhum bypass de linter de fronteira no código atual?
 - [ ] Nenhum módulo > 600 linhas que não esteja justificado no `MODULE.md`?

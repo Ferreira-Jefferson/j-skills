@@ -17,15 +17,17 @@ Liste os pontos por onde o mundo exterior entra neste módulo:
 -->
 - `handlers.py::__FN_NAME__` — __BRIEF_DESCRIPTION__
 
-## Dependências de `shared/`
+## Especialistas da camada comum consumidos
 <!--
-Liste o que este módulo importa de shared/. Isso ajuda a entender a "superfície técnica" do módulo.
+Liste os especialistas da camada comum que este módulo REUSA (não reescreve).
+A camada comum pode se chamar shared/, core/, infra/, lib/ — use o nome real do projeto.
+Isso documenta a "superfície técnica" do módulo e confirma que ele reusa em vez de duplicar infra.
 Exemplo:
-- shared/db — tabelas orders, payments
-- shared/queue — publica order.placed
-- shared/http_client — chamada à Stripe
+- core/db — tabelas orders, payments
+- core/queue — publica order.placed
+- core/llm — chamada ao provedor de modelos
 -->
-- `shared/__SUBPACKAGE__` — __PURPOSE__
+- `<comum>/__SUBPACKAGE__` — __PURPOSE__
 
 ## Tabelas / coleções próprias
 <!--

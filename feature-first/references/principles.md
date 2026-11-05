@@ -51,50 +51,69 @@ No ruim, uma tarefa em checkout precisa: grep "checkout" em 4 pastas, ler 6 arqu
 
 **Trade-off:** "mas e se `checkout_service` for usado pelo admin panel?" — Esse é o ponto do princípio 4: se dois módulos precisam da mesma coisa, ou é infra (vai pro `shared/`) ou é evento (vai pro `shared/contracts/`). O que **não** pode ser é chamada direta.
 
-## 2. Regra do 3
+> **Nota de nomes:** ao longo deste arquivo, `shared/` e `modules/` são **nomes de exemplo** da camada comum e das features. A camada comum pode se chamar `core/`, `infra/`, `lib/` — o que importa é o papel, nunca o nome. Em projeto existente, descubra e respeite a convenção que já está lá.
 
-**Regra:** código só é extraído para `shared/` quando 3+ módulos usarem algo muito parecido.
+## 2. Reúso primeiro; Regra do 3 só para o novo e incerto
+
+São **dois movimentos distintos** que costumam ser confundidos:
+
+**(a) Consumir o que já existe — imediato, sem espera.** Se a capacidade já mora na camada comum (DB, logger, cliente de LLM, HTTP), a feature nº1 a **usa no dia 1**. Não existe "regra do 3" para *consumo*. Reescrever do zero algo que já existe é um erro de arquitetura — antes de codar uma capacidade, descubra se o projeto já a tem.
+
+**(b) Promover algo novo — aí sim, Regra do 3.** Código *novo* só é extraído para a camada comum quando 3+ módulos usarem algo muito parecido.
 
 **Por que 3 e não 2:** com 2 amostras, você está chutando a forma do abstrato. Com 3, você vê o que é comum *de verdade* e o que era coincidência. É a mesma intuição por trás de DRY ser "don't repeat yourself" e não "don't ever duplicate" — DRY original aplicava-se a **conhecimento**, não a similaridade sintática.
 
-**Exemplo de aplicação:**
+**Exemplo de promoção:**
 - Módulo `user_registration` tem uma função `hash_password()`.
 - Módulo `admin_password_reset` também precisa de `hash_password()`. → **duplique**.
-- Módulo `api_key_rotation` também precisa de `hash_password()`. → **agora** promova para `shared/auth/hashing.py`.
+- Módulo `api_key_rotation` também precisa de `hash_password()`. → **agora** promova para `<comum>/auth/hashing.py`.
 
-**Armadilha comum:** agente (e humano ansioso) vê a 2ª ocorrência e quer refatorar imediatamente. Resistir. A duplicação é barata; a abstração errada é cara.
+**Exceção à Regra do 3 — o óbvio.** Capacidade obviamente transversal (DB, log, HTTP, auth) não precisa de 3 provas: já nasce na camada comum, porque toda feature vai precisar. A Regra do 3 existe para o *especulativo* — aquilo que talvez seja comum, mas você ainda não sabe (ver Princípio 3).
 
-## 3. `shared/` é infra, não "utils"
+**Armadilha comum:** agente (e humano ansioso) vê a 2ª ocorrência de algo especulativo e quer refatorar imediatamente. Resistir. A duplicação é barata; a abstração errada é cara.
 
-**Teste:** se o arquivo/pasta em `shared/` **tem opinião sobre o domínio do produto**, está no lugar errado.
+## 3. A camada comum é especialista nomeado — não "utils", não regra de negócio
 
-**Entra em `shared/`:**
-- `shared/db/` — conexão, migrations runner, transação
-- `shared/logger/` — factory de logger estruturado
-- `shared/http_client/` — wrapper de retries, timeouts, tracing
-- `shared/llm_client/` — cliente de chamada a provedores de LLM
-- `shared/queue/` — publish, subscribe, ack
-- `shared/auth/` — verificação de token, hashing de senha
-- `shared/contracts/` — schemas de evento entre módulos
+**O critério NÃO é "é infra?".** É: *"é uma capacidade **nomeada, de propósito único, não-específica de nenhuma feature**, que mais de uma feature precisa?"*. Infra passa, mas especialistas transversais **não-infra** também passam.
 
-**Não entra em `shared/`:**
-- `shared/utils/` — nome diz nada
-- `shared/common/` — idem
-- `shared/helpers/` — idem
-- `shared/business_logic/` — regra de negócio mora no módulo
-- `shared/models/` — modelos de domínio são do módulo; se 2 módulos precisam do mesmo modelo, provavelmente deveriam ser 1 módulo
+**Teste:** se o arquivo/pasta na camada comum **tem opinião sobre o domínio do produto**, está no lugar errado. Se é uma capacidade técnica ou transversal nomeada, está certo.
 
-**Por que o nome importa tanto:** pasta com nome genérico é convite a acumular tudo. Pasta com nome específico ("http_client") força a pergunta "isso é de http?". Se não é, vai pra outro lugar — ou fica no módulo.
+**Entra na camada comum:**
+- `db/` — conexão, migrations runner, transação *(infra)*
+- `logger/` — factory de logger estruturado *(infra)*
+- `http_client/` — wrapper de retries, timeouts, tracing *(infra)*
+- `llm_client/` — cliente de chamada a provedores de LLM *(infra)*
+- `queue/` — publish, subscribe, ack *(infra)*
+- `auth/` — verificação de token, hashing de senha *(infra)*
+- `calc/`, `date_formatting/`, `geo/` — **especialistas transversais que não são infra**, mas são genuinamente comuns
+- `contracts/` — schemas de evento entre módulos
 
-## 4. Módulo nunca importa módulo
+**Não entra:**
+- `utils/`, `common/`, `helpers/`, `misc/` — nome diz nada; lixeira garantida
+- `business_logic/` — regra de negócio mora no módulo
+- `models/` — modelos de domínio são do módulo; se 2 módulos precisam do mesmo modelo, provavelmente deveriam ser 1 módulo
 
-**A regra é absoluta.** Não "prefira não importar", não "use com moderação" — **proibido**, verificado no build.
+**Racionalizar a promoção — óbvio vs. especulativo.** A grande dificuldade é decidir *quando* algo vira comum:
+- **Obviamente comum:** DB, log, HTTP, auth. Você sabe de antemão que toda feature vai precisar. → vai para a camada comum **desde a 1ª feature**, sem esperar.
+- **Especulativamente comum:** um módulo de cálculo, por exemplo. A 1ª feature que o escreve **não tem como saber** que outras features vão precisar dele. → fica **dentro da feature** até a 2ª/3ª aparecer; aí a Regra do 3 o promove. Promover na 1ª é adivinhação.
+
+**Por que o nome importa tanto:** pasta com nome genérico é convite a acumular tudo. Pasta com nome específico ("http_client", "geo") força a pergunta "isso é de http? de geo?". Se não é, vai pra outro lugar — ou fica no módulo. (O **nome da camada** em si — `shared/`, `core/`, `infra/` — é convenção do projeto e não está em questão aqui; o que se bane são pastas-*capacidade* genéricas *dentro* dela.)
+
+## 4. Módulo nunca importa módulo — mas usar a camada comum é encorajado
+
+**Distinção que precede tudo: *usar* ≠ *acoplar*.**
+- **Usar/chamar a camada comum** (o cliente de LLM, o logger, o DB) é **correto e desejável** — é a razão de ela existir. Esta regra **não** proíbe isso, e o medo de "acoplar" jamais deve virar desculpa para reimplementar infra dentro da feature.
+- **Acoplar a outra feature** — importar código *interno* de outra feature — é o que está **proibido**, verificado no build.
+
+**O caso que mais confunde IA — "agente emprestado".** A feature `a` tem um agente/handler `B`. A feature `b` precisa de algo que *parece* o mesmo. A tentação é importar o `B` de `a`. **Errado.** Recrie um `B` próprio dentro de `b`. Mesmo que hoje sejam idênticos, são responsabilidades de features diferentes que vão divergir — o empréstimo cria um acoplamento que trava as duas. Isso **não** é o mesmo que reusar `llm_client`: o `llm_client` é uma capacidade comum sem dono de feature; o agente `B` é lógica de `a`.
+
+**A regra é absoluta.** Não "prefira não importar", não "use com moderação" — import entre features é **proibido**, verificado no build.
 
 **O que fazer quando parecer que precisa:**
 
-**Opção A — duplicar.** Quase sempre a resposta certa na 2ª ocorrência. A função `format_currency_brl()` pode existir em dois módulos sem drama.
+**Opção A — duplicar.** Quase sempre a resposta certa para *lógica de feature*. A função `format_currency_brl()` pode existir em dois módulos sem drama, e o agente `B` é recriado em cada feature que precisa dele.
 
-**Opção B — extrair para `shared/`.** Quando for infra genuína (regra do 3). `shared/formatting/currency.py`.
+**Opção B — extrair para a camada comum.** Quando for capacidade genuinamente transversal (Regra do 3, ou já se for óbvia como infra). Ex: `<comum>/formatting/currency`.
 
 **Opção C — comunicar via contrato/evento.** Quando a necessidade é orquestração, não reuso de código.
 ```
@@ -111,7 +130,37 @@ def send_order_email(event_dict):
 
 O contrato `OrderPlaced` mora em `shared/contracts/`. Nem `checkout` conhece `notifications`, nem vice-versa. Adicionar `analytics` amanhã que também consome `order.placed` é `mkdir modules/analytics/` + subscribe. Zero mudança nos outros.
 
-## 5. Enforcement no build
+## 5. Consuma o módulo pela API pública; estenda-o ou crie no slice quando faltar
+
+**Um módulo é uma capacidade, não um saco de arquivos.** Ele tem uma **superfície pública**, e você consome *essa superfície*. Vale para módulos de feature **e** para especialistas da camada comum (`db`, `llm`, `geography`…).
+
+**Cuidado: "superfície pública" ≠ "só o `__init__`".** O que é público é o que o módulo *decide expor*, e isso varia por módulo:
+- **Módulo fechado** — um `__init__`/índice reexporta tudo. A fachada é a única porta; use só ela.
+- **Módulo com várias entradas públicas** — ele expõe submódulos/arquivos *projetados* para uso direto. Ex: dentro de `core.llm`, um `provider` que fala com os provedores e um `fallback` que cuida do fallback podem ser entradas públicas legítimas. Importar `core.llm/provider` aqui **não** é violação — esse arquivo *é* a interface. No fim das contas o módulo é a pasta; o que conta é o que ela pretende expor.
+
+**O proibido é passar por cima da interface pretendida** — puxar um *interno privado* só porque você precisa de um pedaço dele. Isso, sim, é `from modulo.coisa_interna_privada import _x`.
+
+**Cabe ao agente descobrir a interface pública** e distinguir os dois casos — para não gerar acoplamento incorreto. Pistas: o que `__init__`/`__all__` exporta, convenções de nome (`_privado`), o `MODULE.md` do módulo, a estrutura de submódulos, docstrings. Na dúvida, trate como privado e use a fachada.
+
+**Quando você puxa um interno privado, é um sintoma.** Significa:
+- **Seu uso está errado** — a capacidade já existe na superfície pública; você só não a encontrou. Procure de novo.
+- **O módulo está errado** — a capacidade deveria ser pública e não é. A correção é *no módulo* (expor / promover a submódulo público), não importar o privado.
+
+**Quando o especialista não fornece o que a feature precisa — decisão (a)/(b):**
+
+**(a) A capacidade pertence ao módulo.** Expanda a **API pública** do módulo, de forma **não-quebrante** (adicionar símbolo/parâmetro opcional, nunca mudar assinatura existente).
+> *Exemplo:* roteamento de custo de LLM por produto é responsabilidade do cliente de LLM. Adicionar um "grupo geography" ao `core.llm` é expansão legítima do módulo; a feature só chama o público `call_llm_with_fallback`.
+
+**(b) A capacidade é específica da feature.** Implemente **dentro do slice**, consumindo a API pública do módulo. Não crie um arquivo novo *dentro do módulo comum* para servir uma única feature.
+> *Exemplo:* um `enrich_units_batch` que só faz fan-out (semáforo + gather) sobre o público `enrich_units`, e que só uma feature precisa, **não** vira `core/geography/batch.py` — ele vive no slice e chama o público.
+
+**Teste rápido (a) vs (b):** *"isto usa o interior do módulo, ou só orquestra o público dele?"*
+- Usa o interior / é capacidade genuína do domínio do módulo → **(a)**, expande o módulo.
+- Só orquestra o público (fan-out, batch, retry-wrapper) e/ou só esta feature precisa → **(b)**, vive no slice.
+
+**Por que isso importa:** o contrato público é a fronteira **estável e testável**. Importar um arquivo interno acopla a feature à *implementação* do módulo — o autor do módulo refatora o interno (legítimo, porque é privado) e quebra a sua feature sem aviso. E enfiar código de uma feature dentro do módulo comum infla o módulo e mistura donos: quem mantém aquilo?
+
+## 6. Enforcement no build
 
 **Princípio:** regras arquiteturais viram **erros de compilação/CI**, não comentários de code review.
 
@@ -125,7 +174,7 @@ Configs em [boundary-enforcement.md](boundary-enforcement.md). O essencial:
 
 **Política de escape hatch:** permitir `# noqa: arch` é o mesmo que não ter regra. Se um caso exige exceção, a discussão vai para PR; a exceção vira nova regra ou refatoração.
 
-## 6. Deleção como teste
+## 7. Deleção como teste
 
 **Pergunta diagnóstica:** "quanto tempo leva para remover a feature X?"
 
@@ -139,7 +188,7 @@ Features morrem: produtos pivotam, experimentos param, reguladores exigem remoç
 
 **Exercício recomendado:** uma vez por mês, escolha uma feature e pergunte "se matássemos isso hoje, o que quebraria?". Se a resposta é complicada, você sabe onde refatorar.
 
-## 7. MODULE.md por módulo
+## 8. MODULE.md por módulo
 
 **Formato mínimo** (template completo em `assets/module-template/MODULE.md`):
 
@@ -174,7 +223,7 @@ Processa carrinho → pedido → pagamento.
 
 **Por que funciona tão bem com IA:** agente carrega `MODULE.md` (50 linhas ≈ 500 tokens) e já sabe: o que o módulo faz, por onde entrar, o que pode e não pode tocar. Sem `MODULE.md`, agente precisa abrir 5-10 arquivos e deduzir — 10x mais tokens, mais chance de erro.
 
-## 8. AGENTS.md na raiz
+## 9. AGENTS.md na raiz
 
 É para o projeto o que `MODULE.md` é para o módulo. Template em `assets/AGENTS.md.template`.
 
@@ -187,7 +236,7 @@ Seções essenciais:
 
 Diferença em relação ao README.md: README é para humanos descobrirem o projeto. AGENTS.md é para o agente operar no projeto. Podem se sobrepor em parte, mas AGENTS.md é *mais preciso e mais machine-friendly* (listas estruturadas, comandos literais, sem prosa decorativa).
 
-## 9. Contratos explícitos
+## 10. Contratos explícitos
 
 **Schema sobre tipos soltos.** Use Zod (TS), Pydantic (Py), proto (Go/polyglot). O contrato é um arquivo versionado.
 
@@ -207,7 +256,7 @@ class OrderPlaced(BaseModel):
 
 Ao evoluir, aumentar `version` e manter retrocompatibilidade (ou publicar `OrderPlacedV2` em paralelo até migração). Contratos são fronteira pública; quebras são ruidosas — como deveriam.
 
-## 10. Orçamento de contexto
+## 11. Orçamento de contexto
 
 Heurística: tarefa típica num módulo deve caber em ~5k tokens de código de contexto (≈ 400 linhas efetivas). Se seu módulo tem mais que isso, ou:
 
@@ -216,13 +265,13 @@ Heurística: tarefa típica num módulo deve caber em ~5k tokens de código de c
 
 **Como medir:** `wc -l modules/<x>/*.{py,ts,go}` ou, mais fiel, tokens reais. Manter esse número baixo é uma prática saudável que reflete diretamente em custo e acurácia de IA — e em humanos também.
 
-## 11. Scaffold como script
+## 12. Scaffold como script
 
 **Por quê:** agente (e humano) deixado criar o esqueleto "à mão" vai variar sutilmente — falta um `tests/`, outro usa `test/`, outro esquece o `MODULE.md`. A variação erode o padrão.
 
 **Script:** copia template, substitui placeholders (`__MODULE_NAME__`, `__YEAR__`), cria estrutura. Em [../scripts/scaffold_module.sh](../scripts/scaffold_module.sh).
 
-## 12. Nomes que falam
+## 13. Nomes que falam
 
 **Regra:** nome do módulo = verbo_substantivo concreto, no idioma do projeto.
 

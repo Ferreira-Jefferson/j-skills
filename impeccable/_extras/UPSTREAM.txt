@@ -1,0 +1,5 @@
+upstream: https://github.com/pbakaus/impeccable
+skill: v4.3.1 (release skill-v4.3.1) / engine v0.1.5
+scripts/bin/ omitido: o launcher (scripts/impeccable) baixa o binario no primeiro uso.
+instalar/atualizar oficial: ~/.claude/skills/impeccable/scripts/impeccable install --global --providers=claude --yes --force
+hooks: rodar o install acima a partir da raiz do projeto grava .claude/settings.local.json nele (hooks-settings.json aqui e so o template).
